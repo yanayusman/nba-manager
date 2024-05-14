@@ -12,11 +12,16 @@ public class Temp extends JFrame {
     private JPanel sidebarPanel;
     private JPanel contentPanel;
 
-    public Temp() {
+    public Temp(){
+        initialize();
+    }
+
+    public void initialize() {
         setTitle("blank page");                                               //name for every page
         setSize(900, 800);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
+        setVisible(true);
 
         // navigation Panel
         navigationPanel = new JPanel();
@@ -92,8 +97,7 @@ public class Temp extends JFrame {
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
-            Temp nbaManagerGame = new Temp();
-            nbaManagerGame.setVisible(true);
+            new Temp();
         });
     }
 }
