@@ -3,7 +3,7 @@ import java.awt.*;
 import java.awt.event.*;
 
 public class Temp extends JFrame {
-    final private Font font = new Font("Arial", Font.ITALIC, 30);             // to customize font
+    final private Font font = new Font("Arial", Font.PLAIN, 30);             // to customize font
     final private Dimension dimension = new Dimension(150, 50);
     final private Dimension maxSize = new Dimension(600, 300);
     final private Dimension minSize = new Dimension(400, 100);
