@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package test;
 
 /**
@@ -229,29 +225,36 @@ public class Contract extends JFrame {
         }
     }
 
-    // Method to extend the contract expiration date of a player by 1 year
+    // Method to extend the contract expiration date of a player
     private void extendContractExpirationDate(Player player) {
-        Calendar calendar = Calendar.getInstance();
-        calendar.setTime(player.getExpiryDate());
-        calendar.add(Calendar.YEAR, 1);
-        Date newExpiryDate = new Date(calendar.getTimeInMillis());
-        player.setExpiryDate(newExpiryDate);
+        // Prompt the user to enter a new expiration date
+        String newDateString = JOptionPane.showInputDialog(this, "Enter new contract expiration date (YYYY-MM-DD):");
+        if (newDateString != null && !newDateString.trim().isEmpty()) {
+            try {
+                Date newExpiryDate = Date.valueOf(newDateString);
+                player.setExpiryDate(newExpiryDate);
 
-        // Update the database with the new expiration date
-        String jdbcUrl = "jdbc:mysql://localhost:3306/test";
-        String username = "root";
-        String password = "";
+                // Update the database with the new expiration date
+                String jdbcUrl = "jdbc:mysql://localhost:3306/test";
+                String username = "root";
+                String password = "";
 
-        try (Connection con = DriverManager.getConnection(jdbcUrl, username, password)) {
-            String sql = "UPDATE players_stat_23_24 SET contract_expiration_date = ? WHERE name = ?";
-            PreparedStatement preparedStatement = con.prepareStatement(sql);
-            preparedStatement.setDate(1, newExpiryDate);
-            preparedStatement.setString(2, player.getName());
-            preparedStatement.executeUpdate();
+                try (Connection con = DriverManager.getConnection(jdbcUrl, username, password)) {
+                    String sql = "UPDATE players_stat_23_24 SET contract_expiration_date = ? WHERE name = ?";
+                    PreparedStatement preparedStatement = con.prepareStatement(sql);
+                    preparedStatement.setDate(1, newExpiryDate);
+                    preparedStatement.setString(2, player.getName());
+                    preparedStatement.executeUpdate();
 
-            JOptionPane.showMessageDialog(this, "Contract expiration date for player \"" + player.getName() + "\" has been extended to " + newExpiryDate + ".");
-        } catch (SQLException e) {
-            e.printStackTrace();
+                    JOptionPane.showMessageDialog(this, "Contract expiration date for player \"" + player.getName() + "\" has been extended to " + newExpiryDate + ".");
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            } catch (IllegalArgumentException e) {
+                JOptionPane.showMessageDialog(this, "Invalid date format. Please enter the date in YYYY-MM-DD format.");
+            }
+        } else {
+            JOptionPane.showMessageDialog(this, "No date entered. Contract extension canceled.");
         }
     }
 

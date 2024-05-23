@@ -107,7 +107,7 @@ public class Player  extends JFrame {
         JButton searchButton = new JButton("SEARCH");
         searchButton.setFont(new Font("Arial", Font.BOLD, 17));
         searchButton.setPreferredSize(new Dimension(125, 45));
-        searchButton.addActionListener(e -> loadPlayersFoundTable());
+        searchButton.addActionListener(e -> loadPlayersTable());
 
         JPanel searchButtonPanel = new JPanel();
         searchButtonPanel.setLayout(new FlowLayout(FlowLayout.CENTER));

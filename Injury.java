@@ -4,7 +4,6 @@ import java.awt.*;
 import java.awt.event.*;
 import java.sql.*;
 import java.util.*;
-import java.util.Queue;
 
 public class Injury extends JFrame {
     final private Font font = new Font("Arial", Font.BOLD, 15);
