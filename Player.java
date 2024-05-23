@@ -1,5 +1,6 @@
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
+import javax.swing.table.DefaultTableModel;
 
 import java.awt.*;
 import java.awt.event.*;
@@ -13,8 +14,8 @@ public class Player  extends JFrame {
 
     private JPanel navigationPanel, sidebarPanel, contentPanel;
     private JTextField heightField, weightField, positionField;
-    private DefaultListModel<String> playersFoundListModel;
-    private JList<String> playersFoundList;
+    private DefaultTableModel playersFoundTableModel;
+    private JTable playersFoundTable;
 
     public Player(){
         initialize();
@@ -106,28 +107,28 @@ public class Player  extends JFrame {
         JButton searchButton = new JButton("SEARCH");
         searchButton.setFont(new Font("Arial", Font.BOLD, 17));
         searchButton.setPreferredSize(new Dimension(125, 45));
-        //addButton.addActionListener();
+        searchButton.addActionListener(e -> loadPlayersFoundTable());
 
         JPanel searchButtonPanel = new JPanel();
         searchButtonPanel.setLayout(new FlowLayout(FlowLayout.CENTER));
         searchButtonPanel.add(searchButton);
         inputPanel.add(searchButtonPanel, BorderLayout.SOUTH);
 
-        /**
-         * LIST PANEL
-         */
-        JPanel listPanel = new JPanel(new BorderLayout());
+        contentPanel.add(inputPanel, BorderLayout.NORTH);
 
-        //JList
-        playersFoundListModel = new DefaultListModel<>();
-        playersFoundList = new JList<>(playersFoundListModel);
-        playersFoundList.setPreferredSize(new Dimension(200, 200));
+        /**
+         * TABLE PANEL
+         */
+        JPanel tablePanel = new JPanel(new BorderLayout());
+
+        //JTable
+        loadPlayersTable();
         JPanel playersFoundPanel = new JPanel(new BorderLayout());
         playersFoundPanel.setBorder(new TitledBorder("Match(es) Found: "));
-        playersFoundPanel.add(new JScrollPane(playersFoundList), BorderLayout.CENTER);
-        loadPlayersFound();
-        listPanel.add(playersFoundPanel);
+        playersFoundPanel.add(new JScrollPane(playersFoundTable), BorderLayout.CENTER);
+        tablePanel.add(playersFoundPanel);
 
+        contentPanel.add(tablePanel, BorderLayout.CENTER);
 
         /**
          * BOTTOM PANEL
@@ -145,8 +146,6 @@ public class Player  extends JFrame {
         addButtonPanel.add(addButton);
         bottomPanel.add(addButtonPanel, BorderLayout.SOUTH);
 
-        contentPanel.add(inputPanel, BorderLayout.NORTH);
-        contentPanel.add(listPanel, BorderLayout.CENTER);
         contentPanel.add(bottomPanel, BorderLayout.SOUTH);
 
         getContentPane().setLayout(new BorderLayout());
@@ -157,30 +156,77 @@ public class Player  extends JFrame {
         setVisible(true);
     }
 
-    private void loadPlayersFound() {
+    private void loadPlayersTable() {
         String jdbcUrl = "jdbc:mysql://localhost:3306/nbamanager";
         String username = "useract";
         String password = "welcome1";
 
-        String height = heightField.getText();
-        String weight = weightField.getText() + " lbs";
-        String position = positionField.getText();
-
         try (Connection con = DriverManager.getConnection(jdbcUrl, username, password)) {
-            String sql = "SELECT * FROM players_profile WHERE height LIKE " + height + 
-                            " OR weight LIKE " + weight + " AND position LIKE " + position;
+            String sql = "SELECT * FROM players_profile";
             Statement statement = con.createStatement();
             ResultSet rs = statement.executeQuery(sql);
 
-            while (rs.next()) {
-                String playername = rs.getString("name");
-                playersFoundListModel.addElement(playername);
+            // Finding total number of rows
+            int rows = 0;
+            if(rs.next()) {
+                rs.last();
+                rows = rs.getRow();
+                rs.beforeFirst();
             }
+
+            String[][] data = new String[rows][8];
+            int i = 0;
+
+            while (rs.next()) {
+                data[i][0] = rs.getString(1);
+                data[i][1] = rs.getString(2);
+                data[i][2] = rs.getString(3);
+                data[i][3] = rs.getString(4);
+                data[i][4] = rs.getString(5);
+                data[i][5] = rs.getString(6);
+                data[i][6] = rs.getString(7);
+                data[i][7] = rs.getString(8);
+                System.out.println(data);
+                i++;
+            }
+
+            String[] columns = {"Name", "Team", "Number", "Position", "Height", "Weight", "Last Attended", "Country"};
+            playersFoundTableModel = new DefaultTableModel(data, columns);
+            playersFoundTable = new JTable(playersFoundTableModel);
+            playersFoundTable.setModel(playersFoundTableModel);
+
+            rs.close();
+            statement.close();
 
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
+
+    // private void loadPlayersFoundTable() {
+    //     String jdbcUrl = "jdbc:mysql://localhost:3306/nbamanager";
+    //     String username = "useract";
+    //     String password = "welcome1";
+
+    //     String height = heightField.getText();
+    //     String weight = weightField.getText() + " lbs";
+    //     String position = positionField.getText();
+
+    //     try (Connection con = DriverManager.getConnection(jdbcUrl, username, password)) {
+    //         String sql = "SELECT * FROM players_profile WHERE height LIKE " + height + 
+    //                         " OR weight LIKE " + weight + " AND position LIKE " + position;
+    //         Statement statement = con.createStatement();
+    //         ResultSet rs = statement.executeQuery(sql);
+
+    //         while (rs.next()) {
+    //             String playername = rs.getString("name");
+    //             //playersFoundTableModel.addRow();
+    //         }
+
+    //     } catch (SQLException e) {
+    //         e.printStackTrace();
+    //     }
+    // }
 
     private void handleSidebarButtonClick(String label) {
         switch (label) {
