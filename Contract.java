@@ -1,16 +1,13 @@
-package test;
+// the latest one
 
-/**
- *
- * @author Chanteq Demo
- */
-import java.sql.Date;
-import javax.swing.*;
-import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.awt.event.*;
 import java.sql.*;
 import java.util.*;
+import java.text.*;
+import java.util.Date;
+import javax.swing.*;
+import javax.swing.border.*;
 
 public class Contract extends JFrame {
     final private Font font = new Font("Arial", Font.BOLD, 15);
@@ -154,7 +151,7 @@ public class Contract extends JFrame {
         String password = "";
 
         try (Connection con = DriverManager.getConnection(jdbcUrl, username, password)) {
-            String sql = "SELECT name FROM players_stat_23_24";
+            String sql = "SELECT name FROM team_players";
             Statement statement = con.createStatement();
             ResultSet rs = statement.executeQuery(sql);
 
@@ -209,6 +206,34 @@ public class Contract extends JFrame {
         return null;
     }
 
+    private Date generateRandomDate() {
+        Random random = new Random();
+        int currentYear = Calendar.getInstance().get(Calendar.YEAR);
+
+        // Set a range for the random date, for example, within 5 years from now
+        int year = currentYear + random.nextInt(5); // current year + 0 to 4 years
+        int dayOfYear = random.nextInt(365); // Random day of the year
+
+        Calendar calendar = new GregorianCalendar(year, 0, 1);
+        calendar.add(Calendar.DAY_OF_YEAR, dayOfYear);
+
+        // Create a java.util.Date object
+        java.util.Date utilDate = calendar.getTime();
+
+        // Format the date to remove the time part
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+        String formattedDate = dateFormat.format(utilDate);
+
+        // Parse the formatted date back to java.sql.Date
+        try {
+            java.util.Date parsedDate = dateFormat.parse(formattedDate);
+            return new Date(parsedDate.getTime());
+        } catch (ParseException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+    
     // Method to remove a player from the contract list and add to the renewed list
     private void rmvFromContractList() {
         // Remove the player with the highest priority (highest efficiency and earliest contract expiry date)
@@ -226,37 +251,27 @@ public class Contract extends JFrame {
     }
 
     // Method to extend the contract expiration date of a player
-    private void extendContractExpirationDate(Player player) {
+   private boolean extendContractExpirationDate(Player player) {
         // Prompt the user to enter a new expiration date
-        String newDateString = JOptionPane.showInputDialog(this, "Enter new contract expiration date (YYYY-MM-DD):");
+        String newDateString = JOptionPane.showInputDialog(this, "Enter new contract expiration date (YYYY-MM-DD) for: " + player);
         if (newDateString != null && !newDateString.trim().isEmpty()) {
             try {
-                Date newExpiryDate = Date.valueOf(newDateString);
+                SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+                dateFormat.setLenient(false);
+                java.util.Date parsedDate = dateFormat.parse(newDateString);
+                java.sql.Date newExpiryDate = new java.sql.Date(parsedDate.getTime());
+    
+                // update the player's expiration date
                 player.setExpiryDate(newExpiryDate);
-
-                // Update the database with the new expiration date
-                String jdbcUrl = "jdbc:mysql://localhost:3306/test";
-                String username = "root";
-                String password = "";
-
-                try (Connection con = DriverManager.getConnection(jdbcUrl, username, password)) {
-                    String sql = "UPDATE players_stat_23_24 SET contract_expiration_date = ? WHERE name = ?";
-                    PreparedStatement preparedStatement = con.prepareStatement(sql);
-                    preparedStatement.setDate(1, newExpiryDate);
-                    preparedStatement.setString(2, player.getName());
-                    preparedStatement.executeUpdate();
-
-                    JOptionPane.showMessageDialog(this, "Contract expiration date for player \"" + player.getName() + "\" has been extended to " + newExpiryDate + ".");
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            } catch (IllegalArgumentException e) {
+                return true;
+            } catch (ParseException e) {
                 JOptionPane.showMessageDialog(this, "Invalid date format. Please enter the date in YYYY-MM-DD format.");
             }
         } else {
             JOptionPane.showMessageDialog(this, "No date entered. Contract extension canceled.");
         }
-    }
+        return false;
+    }  
 
     private void handleSidebarButtonClick(String label) {
         // Close current frame before opening a new one if necessary
