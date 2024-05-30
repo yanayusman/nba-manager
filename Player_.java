@@ -17,6 +17,8 @@ public class Player_  extends JFrame {
     private DefaultTableModel playersFoundTableModel;
     private JTable playersFoundTable;
     private String playerName, team, number, position, height, weight, lastAttended, country;
+    private int playerCounter, salaryCounter, guardCounter, forwardCounter, centerCounter;
+
 
     public Player_(){
         initialize();
@@ -128,7 +130,7 @@ public class Player_  extends JFrame {
             playersFoundTableModel.addColumn(column);
         }
         playersFoundTable = new JTable(playersFoundTableModel);
-        playersFoundTable.setPreferredSize(new Dimension(900, 17500));
+        playersFoundTable.setPreferredSize(new Dimension(900, 8750));
         playersFoundTable.setRowHeight(30);
         playersFoundPanel.setBorder(new TitledBorder("Match(es) Found: "));
         JScrollPane tableScrollPane = new JScrollPane(playersFoundTable);
@@ -140,15 +142,26 @@ public class Player_  extends JFrame {
         /**
          * BOTTOM PANEL
          */
-        JButton addButton = new JButton("ADD TO TEAM");
-        addButton.setFont(font);
-        addButton.setPreferredSize(new Dimension(150, 45));
-        JPanel buttonPanel = new JPanel();
-        buttonPanel.setLayout(new FlowLayout(FlowLayout.CENTER));
-        buttonPanel.add(addButton);
+        JPanel bottomPanel = new JPanel(); 
+        bottomPanel.setPreferredSize(new Dimension(450, 400));
+        getRequirementsStatus();
+        JLabel playerCounterLabel = new JLabel("Current number of team players (Minimum 10 players, Maximum 15 players): " + playerCounter);
+        //JLabel salaryCounterLabel = new JLabel("Current total salary (Maximum 20,000): " + salaryCounter);
+        JLabel forwardCounterLabel = new JLabel("Current number of forwards (Minimum 2 players): " + forwardCounter);
+        JLabel centerCounterLabel = new JLabel("Current number of centers (Minimum 2 players): " + centerCounter);
+        JLabel guardCounterLabel = new JLabel("Current number of guards (Minimum 2 players): " + guardCounter);
 
-        JPanel bottomPanel = new JPanel(new BorderLayout()); 
-        bottomPanel.add(buttonPanel, BorderLayout.SOUTH);
+        playerCounterLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        //salaryCounterLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        forwardCounterLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        centerCounterLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        guardCounterLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+
+        bottomPanel.add(playerCounterLabel, BorderLayout.SOUTH);
+        //bottomPanel.add(salaryCounterLabel, BorderLayout.SOUTH);
+        bottomPanel.add(forwardCounterLabel, BorderLayout.SOUTH);
+        bottomPanel.add(centerCounterLabel, BorderLayout.SOUTH);
+        bottomPanel.add(guardCounterLabel, BorderLayout.SOUTH);
 
         // Content Panel
         contentPanel.add(inputPanel, BorderLayout.NORTH);
@@ -161,6 +174,51 @@ public class Player_  extends JFrame {
         getContentPane().add(contentPanel, BorderLayout.CENTER);                // set content position
    
         setVisible(true);
+    }
+
+    private void getRequirementsStatus() {
+        String jdbcUrl = "jdbc:mysql://localhost:3306/nbamanager";
+        String username = "useract";
+        String password = "welcome1";
+
+        try (Connection con = DriverManager.getConnection(jdbcUrl, username, password)) {
+            try { 
+                String sqlPlayerCounter = "SELECT COUNT(name) FROM team_players";
+                PreparedStatement psPlayerCounter = con.prepareStatement(sqlPlayerCounter);
+                ResultSet rsPlayerCounter = psPlayerCounter.executeQuery(sqlPlayerCounter);
+                rsPlayerCounter.next();
+                playerCounter = rsPlayerCounter.getInt(1);
+
+                String sqlSalaryCounter = "SELECT SUM(salary) FROM team_players";
+                PreparedStatement psSalaryCounter = con.prepareStatement(sqlSalaryCounter);
+                ResultSet rsSalaryCounter = psSalaryCounter.executeQuery(sqlSalaryCounter);
+                rsSalaryCounter.next();
+                salaryCounter = rsSalaryCounter.getInt(1);
+
+                String sqlForwardCounter = "SELECT COUNT(position) FROM team_players WHERE position LIKE '%F%'";
+                PreparedStatement psForwardCounter = con.prepareStatement(sqlForwardCounter);
+                ResultSet rsForwardCounter = psForwardCounter.executeQuery(sqlForwardCounter);
+                rsForwardCounter.next();
+                forwardCounter = rsForwardCounter.getInt(1);
+
+                String sqlGuardCounter = "SELECT COUNT(position) FROM team_players WHERE position LIKE '%G%'";
+                PreparedStatement psGuardCounter = con.prepareStatement(sqlGuardCounter);
+                ResultSet rsGuardCounter = psGuardCounter.executeQuery(sqlGuardCounter);
+                rsGuardCounter.next();
+                guardCounter = rsGuardCounter.getInt(1);
+
+                String sqlCenterCounter = "SELECT COUNT(position) FROM team_players WHERE position LIKE '%C%'";
+                PreparedStatement psCenterCounter = con.prepareStatement(sqlCenterCounter);
+                ResultSet rsCenterCounter = psCenterCounter.executeQuery(sqlCenterCounter);
+                rsCenterCounter.next();
+                centerCounter = rsCenterCounter.getInt(1);
+
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
     private void loadPlayersTable() {
@@ -249,7 +307,7 @@ public class Player_  extends JFrame {
                 new Temp();
                 break;
             case "PLAYER":
-                new Temp(); 
+                new Player_(); 
                 break;
             case "JOURNEY":
                 new Temp();
@@ -287,6 +345,7 @@ class ButtonEditor extends DefaultCellEditor {
     private String label;
     private boolean clicked;
     private int selectedRow;
+    private int playerCounter, salaryCounter;// guardCounter, forwardCounter, centerCounter;
 
     public ButtonEditor(JTextField text, JTable table) {
         super(text);
@@ -324,24 +383,61 @@ class ButtonEditor extends DefaultCellEditor {
         String country = playerInfoArr[7];
 
         try (Connection con = DriverManager.getConnection(jdbcUrl, username, password)) {
-            String sql = "INSERT INTO team_players (name, team, number, position, height, weight, last_attended, country) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-            try (PreparedStatement ps = con.prepareStatement(sql)) {
-                ps.setString(1, playerName);
-                ps.setString(2, team);
-                ps.setString(3, number);
-                ps.setString(4, position);
-                ps.setString(5, height);
-                ps.setString(6, weight);
-                ps.setString(7, lastAttended);
-                ps.setString(8, country);
+            try {
 
-                int result = ps.executeUpdate();
+                String sql = "INSERT INTO team_players (name, team, number, position, height, weight, last_attended, country) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                PreparedStatement ps = con.prepareStatement(sql);
+                
+                String sqlPlayerCounter = "SELECT COUNT(name) FROM team_players";
+                PreparedStatement psPlayerCounter = con.prepareStatement(sqlPlayerCounter);
+                ResultSet rsPlayerCounter = psPlayerCounter.executeQuery(sqlPlayerCounter);
+                rsPlayerCounter.next();
+                playerCounter = rsPlayerCounter.getInt(1);
 
-                if (result > 0) {
-                    System.out.println("Player " + playerName + " added to the team.");
-                } else {
-                    //JOptionPane.showMessageDialog(this, "Failed to add player to the team. Please try again.");
+                String sqlSalaryCounter = "SELECT SUM(salary) FROM team_players";
+                PreparedStatement psSalaryCounter = con.prepareStatement(sqlSalaryCounter);
+                ResultSet rsSalaryCounter = psSalaryCounter.executeQuery(sqlSalaryCounter);
+                rsSalaryCounter.next();
+                salaryCounter = rsSalaryCounter.getInt(1);
+
+                // String sqlForwardCounter = "SELECT COUNT(position) FROM team_players WHERE position LIKE '%F%'";
+                // PreparedStatement psForwardCounter = con.prepareStatement(sqlForwardCounter);
+                // ResultSet rsForwardCounter = psForwardCounter.executeQuery(sqlForwardCounter);
+                // rsForwardCounter.next();
+                // forwardCounter = rsForwardCounter.getInt(1);
+
+                // String sqlGuardCounter = "SELECT COUNT(position) FROM team_players WHERE position LIKE '%G%'";
+                // PreparedStatement psGuardCounter = con.prepareStatement(sqlGuardCounter);
+                // ResultSet rsGuardCounter = psGuardCounter.executeQuery(sqlGuardCounter);
+                // rsGuardCounter.next();
+                // guardCounter = rsGuardCounter.getInt(1);
+
+                // String sqlCenterCounter = "SELECT COUNT(position) FROM team_players WHERE position LIKE '%C%'";
+                // PreparedStatement psCenterCounter = con.prepareStatement(sqlCenterCounter);
+                // ResultSet rsCenterCounter = psCenterCounter.executeQuery(sqlCenterCounter);
+                // rsCenterCounter.next();
+                // centerCounter = rsCenterCounter.getInt(1);
+
+                if(playerCounter < 15) {
+                    ps.setString(1, playerName);
+                    ps.setString(2, team);
+                    ps.setString(3, number);
+                    ps.setString(4, position);
+                    ps.setString(5, height);
+                    ps.setString(6, weight);
+                    ps.setString(7, lastAttended);
+                    ps.setString(8, country);
+    
+                    int result = ps.executeUpdate();
+    
+                    if (result > 0) {
+                        System.out.println("Player " + playerName + " added to the team.");
+                    } else {
+                        System.out.println("Failed to add player to the team. Please try again.");
+                    }
                 }
+            } catch (SQLException e) {
+                e.printStackTrace();
             }
 
         } catch (SQLException e) {
@@ -350,8 +446,7 @@ class ButtonEditor extends DefaultCellEditor {
     }
 
     @Override
-    public Component getTableCellEditorComponent(JTable table, Object value,
-            boolean selected, int row, int column) {
+    public Component getTableCellEditorComponent(JTable table, Object value, boolean selected, int row, int column) {
 
         label = "Add";
         button.setText(label);
