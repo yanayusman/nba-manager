@@ -1,14 +1,17 @@
-package src;
+
 import java.util.Date;
 import javax.swing.*;
 import javax.swing.border.*;
+
+import src.Injury;
+
 import java.awt.*;
 import java.awt.event.*;
 import java.sql.*;
 import java.util.*;
 import java.text.*;
 
-public class Contract extends JFrame {
+public class MyContract extends JFrame {
     final private Font font = new Font("Arial", Font.BOLD, 15);
     final private Dimension dimension = new Dimension(150, 50);
     final private Dimension maxSize = new Dimension(600, 300);
@@ -21,7 +24,7 @@ public class Contract extends JFrame {
     private PriorityQueue<Player> contractQueue;
     private Queue<Player> renewedQueue;
 
-    public Contract() {
+    public MyContract() {
         initialize();
     }
 
@@ -294,7 +297,7 @@ public class Contract extends JFrame {
                 new Temp();
                 break;
             case "CONTRACT":
-                new Contract();
+                new MyContract();
                 break;
             case "INJURY":
                 new Injury();
@@ -337,7 +340,7 @@ public class Contract extends JFrame {
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
-            new Contract();
+            new MyContract();
         });
     }
 }
