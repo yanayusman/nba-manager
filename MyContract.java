@@ -1,15 +1,15 @@
-
-import java.util.Date;
-import javax.swing.*;
-import javax.swing.border.*;
-
-import src.Injury;
-
 import java.awt.*;
 import java.awt.event.*;
 import java.sql.*;
-import java.util.*;
 import java.text.*;
+import java.util.*;
+import java.util.Date;
+import java.util.Queue;
+
+import javax.swing.*;
+import javax.swing.border.TitledBorder;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.DefaultTableModel;
 
 public class MyContract extends JFrame {
     final private Font font = new Font("Arial", Font.BOLD, 15);
@@ -19,10 +19,11 @@ public class MyContract extends JFrame {
 
     private JPanel navigationPanel, sidebarPanel, contentPanel;
     private JComboBox<String> playerField;
-    private DefaultListModel<String> contractListModel, renewedListModel;
-    private JList<String> contractList, renewedList;
+    private DefaultTableModel contractTableModel, renewedTableModel;
+    private JTable contractTable, renewedTable;
     private PriorityQueue<Player> contractQueue;
     private Queue<Player> renewedQueue;
+    private Map<String, Player> playerMap = new HashMap<>();
 
     public MyContract() {
         initialize();
@@ -92,10 +93,21 @@ public class MyContract extends JFrame {
         btnPanel.add(addButton);
         inputPanel.add(btnPanel);
 
-        contractListModel = new DefaultListModel<>();
-        renewedListModel = new DefaultListModel<>();
-        contractList = new JList<>(contractListModel);
-        renewedList = new JList<>(renewedListModel);
+        // Initialize the table models for the contract and renewed lists
+        contractTableModel = new DefaultTableModel(new String[]{"Player Name", "Efficiency", "Expiry Date"}, 0);
+        renewedTableModel = new DefaultTableModel(new String[]{"Player Name", "Efficiency", "Expiry Date"}, 0);
+        contractTable = new JTable(contractTableModel);
+        renewedTable = new JTable(renewedTableModel);
+
+        // Center the content in the table cells
+        DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
+        centerRenderer.setHorizontalAlignment(JLabel.CENTER);
+        for (int i = 0; i < contractTable.getColumnCount(); i++) {
+            contractTable.getColumnModel().getColumn(i).setCellRenderer(centerRenderer);
+        }
+        for (int i = 0; i < renewedTable.getColumnCount(); i++) {
+            renewedTable.getColumnModel().getColumn(i).setCellRenderer(centerRenderer);
+        }
         // Initialize the contractQueue with a custom comparator
         contractQueue = new PriorityQueue<>((p1, p2) -> {
             // Compare players based on efficiency first
@@ -107,17 +119,18 @@ public class MyContract extends JFrame {
             return efficiencyComparison;
         });
         renewedQueue = new LinkedList<>();
+        playerMap = new HashMap<>(); // Initialize the player map
 
-        contractList.setPreferredSize(new Dimension(50, 200));
-        renewedList.setPreferredSize(new Dimension(400, 500));
+        contractTable.setPreferredSize(new Dimension(50, 200));
+        renewedTable.setPreferredSize(new Dimension(400, 500));
 
         JPanel contractPanel = new JPanel(new BorderLayout());
         contractPanel.setBorder(new TitledBorder("Contract Extension Queue"));
-        contractPanel.add(new JScrollPane(contractList), BorderLayout.CENTER);
+        contractPanel.add(new JScrollPane(contractTable), BorderLayout.CENTER);
 
         JPanel renewedPanel = new JPanel(new BorderLayout());
         renewedPanel.setBorder(new TitledBorder("Renewed Contract Queue"));
-        renewedPanel.add(new JScrollPane(renewedList), BorderLayout.CENTER);
+        renewedPanel.add(new JScrollPane(renewedTable), BorderLayout.CENTER);
 
         JPanel listPanel = new JPanel(new GridLayout(1, 2, 10, 50));
         listPanel.add(contractPanel);
@@ -153,13 +166,14 @@ public class MyContract extends JFrame {
         String password = "welcome1";
 
         try (Connection con = DriverManager.getConnection(jdbcUrl, username, password)) {
-            String sql = "SELECT name FROM players";
+            String sql = "SELECT name FROM team_players";
             Statement statement = con.createStatement();
             ResultSet rs = statement.executeQuery(sql);
 
             while (rs.next()) {
                 String playername = rs.getString("name");
                 playerField.addItem(playername);
+                playerMap.put(playername, null);
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -173,9 +187,9 @@ public class MyContract extends JFrame {
         if (playername != null) {
             Player player = fetchPlayerDetails(playername);
             if (player != null) {
-                // Add player to the priority queue
                 contractQueue.add(player);
-                contractListModel.addElement(player.toString());
+                contractTableModel.addRow(new Object[]{player.getName(), player.getEfficiency(), player.getExpiryDate()}); // Add player to the contract table model
+                playerField.removeItem(playername); // Remove player from the dropdown list
                 JOptionPane.showMessageDialog(this, "Player \"" + playername + "\" added to Contract Queue.");
             } else {
                 JOptionPane.showMessageDialog(this, "Player details could not be fetched.");
@@ -185,79 +199,69 @@ public class MyContract extends JFrame {
         }
     }
 
-    // Method to fetch player details from database
+    // Method to fetch player details from the database
     private Player fetchPlayerDetails(String playername) {
+        // Check if the player details are already cached in the map
+        if (playerMap.get(playername) != null) {
+            return playerMap.get(playername);
+        }
+
         String jdbcUrl = "jdbc:mysql://localhost:3306/nbamanager";
         String username = "useract";
         String password = "welcome1";
-    
+
         try (Connection con = DriverManager.getConnection(jdbcUrl, username, password)) {
-            String sql = "SELECT eff FROM players_stat_23_24 WHERE name = ?";
+            String sql = "SELECT eff, contract_expiration_date FROM players_stat_23_24 WHERE name = ?";
             PreparedStatement preparedStatement = con.prepareStatement(sql);
             preparedStatement.setString(1, playername);
             ResultSet rs = preparedStatement.executeQuery();
-    
+
             if (rs.next()) {
                 int efficiency = rs.getInt("eff");
-                Date expiryDate = generateRandomDate(); // Use the formatted random date
-                return new Player(playername, efficiency, expiryDate);
+                Date expiryDate = rs.getDate("contract_expiration_date");
+                Player player = new Player(playername, efficiency, expiryDate);
+                playerMap.put(playername, player);
+                return player;
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
         return null;
     }
-    
-    
-    private Date generateRandomDate() {
-        Random random = new Random();
-        int currentYear = Calendar.getInstance().get(Calendar.YEAR);
 
-        // Set a range for the random date, for example, within 5 years from now
-        int year = currentYear + random.nextInt(5); // current year + 0 to 4 years
-        int dayOfYear = random.nextInt(365); // Random day of the year
-
-        Calendar calendar = new GregorianCalendar(year, 0, 1);
-        calendar.add(Calendar.DAY_OF_YEAR, dayOfYear);
-
-        // Create a java.util.Date object
-        java.util.Date utilDate = calendar.getTime();
-
-        // Format the date to remove the time part
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-        String formattedDate = dateFormat.format(utilDate);
-
-        // Parse the formatted date back to java.sql.Date
-        try {
-            java.util.Date parsedDate = dateFormat.parse(formattedDate);
-            return new Date(parsedDate.getTime());
-        } catch (ParseException e) {
-            e.printStackTrace();
-            return null;
-        }
-    }
-
-    // Method to remove a player from the contract list and add to the renewed list
+    // Method to remove a player from the contract list and potentially add to the renewed list
     private void rmvFromContractList() {
-        // Remove the player with the highest priority (highest efficiency and earliest contract expiry date)
-        Player removedPlayer = contractQueue.poll();
+        Player removedPlayer = contractQueue.poll(); // Remove the player with the highest priority
     
         if (removedPlayer != null) {
-            contractListModel.removeElement(removedPlayer.toString());
-            boolean success = extendContractExpirationDate(removedPlayer);
-            if (success) {
+            contractTableModel.removeRow(findPlayerIndexInTable(removedPlayer.getName(), contractTableModel));
+            playerField.removeItem(removedPlayer.getName());
+            boolean extended = extendContractExpirationDate(removedPlayer);
+            if (extended) {
                 renewedQueue.add(removedPlayer);
-                renewedListModel.addElement(removedPlayer.toString());
+                renewedTableModel.addRow(new Object[]{removedPlayer.getName(), removedPlayer.getEfficiency(), removedPlayer.getExpiryDate()});
                 JOptionPane.showMessageDialog(this, "Player \"" + removedPlayer.getName() + "\" has been moved to the Renewed Contract Queue.");
             } else {
-                contractQueue.add(removedPlayer);
-                contractListModel.addElement(removedPlayer.toString());
+                contractQueue.add(removedPlayer); // Re-add to the contractQueue if no valid date entered
+                contractTableModel.addRow(new Object[]{removedPlayer.getName(), removedPlayer.getEfficiency(), removedPlayer.getExpiryDate()});
             }
         } else {
             JOptionPane.showMessageDialog(this, "Contract Queue is empty.");
         }
+    }    
+
+
+    // Utility method to find a player in the table model
+    private int findPlayerIndexInTable(String playerName, DefaultTableModel model) {
+        for (int i = 0; i < model.getRowCount(); i++) {
+            if (model.getValueAt(i, 0).equals(playerName)) {
+                return i;
+            }
+        }
+        return -1; // Player not found
     }
-    
+
+    // Method to extend the contract expiration date of a player
     private boolean extendContractExpirationDate(Player player) {
         // Prompt the user to enter a new expiration date
         String newDateString = JOptionPane.showInputDialog(this, "Enter new contract expiration date (YYYY-MM-DD) for: " + player);
@@ -267,37 +271,67 @@ public class MyContract extends JFrame {
                 dateFormat.setLenient(false);
                 java.util.Date parsedDate = dateFormat.parse(newDateString);
                 java.sql.Date newExpiryDate = new java.sql.Date(parsedDate.getTime());
-    
-                // update the player's expiration date
+
+                // Get the current date and add one year to it
+                Calendar currentDate = Calendar.getInstance();
+                currentDate.add(Calendar.YEAR, 1);
+                java.util.Date oneYearLater = currentDate.getTime();
+
+                // Check if the new expiry date is at least one year from the current date
+                if (newExpiryDate.before(oneYearLater)) {
+                    JOptionPane.showMessageDialog(this, "The new contract expiration date must be at least one year from today.");
+                    return false; // Return false to indicate the date is not valid
+                }
+
+                // Update the player's expiration date
                 player.setExpiryDate(newExpiryDate);
-                return true;
+
+                String jdbcUrl = "jdbc:mysql://localhost:3306/nbamanager";
+                String username = "useract";
+                String password = "welcome1";
+
+                // Update the database
+                try (Connection con = DriverManager.getConnection(jdbcUrl, username, password)) {
+                    String sql = "UPDATE players_stat_23_24 SET contract_expiration_date = ? WHERE name = ?";
+                    PreparedStatement preparedStatement = con.prepareStatement(sql);
+                    preparedStatement.setDate(1, newExpiryDate);
+                    preparedStatement.setString(2, player.getName());
+                    preparedStatement.executeUpdate();
+
+                    JOptionPane.showMessageDialog(this, "Contract expiration date for player \"" + player.getName() + "\" has been extended to " + newExpiryDate + ".");
+                    return true; // Return true to indicate the date was successfully parsed and set
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                    JOptionPane.showMessageDialog(this, "Failed to update the database. Please try again.");
+                    return false; // Return false to indicate database update failed
+                }
             } catch (ParseException e) {
                 JOptionPane.showMessageDialog(this, "Invalid date format. Please enter the date in YYYY-MM-DD format.");
+                return false; // Return false to indicate invalid date format
             }
         } else {
-            JOptionPane.showMessageDialog(this, "No date entered. Contract extension canceled.");
+            JOptionPane.showMessageDialog(this, "No date entered. Player remains in the Contract Extension Queue.");
+            return false; // Return false to indicate no date was entered
         }
-        return false;
-    }    
+    }
 
     private void handleSidebarButtonClick(String label) {
-        // close current frame before opening a new one
         this.dispose();
         switch (label) {
             case "HOME":
                 new Home();
                 break;
             case "TEAM":
-                new Temp();
+                new MyTeam();
                 break;
             case "PLAYER":
-                new Temp();
+                new Player_(); 
                 break;
             case "JOURNEY":
                 new Temp();
                 break;
             case "CONTRACT":
-                new MyContract();
+                new Contract();
                 break;
             case "INJURY":
                 new Injury();
@@ -334,13 +368,13 @@ public class MyContract extends JFrame {
 
         @Override
         public String toString() {
-            return String.format("Player: %-15s | Efficiency: %-3d | Expiry: %s", name, efficiency, expiryDate.toString());
+            return String.format("Player: %-20s | Efficiency: %-5d | Expiry: %s", name, efficiency, expiryDate.toString());
         }
     }
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
-            new MyContract();
+            new Contract();
         });
     }
 }
