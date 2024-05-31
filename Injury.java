@@ -1,9 +1,10 @@
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
+import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.*;
 import java.sql.*;
-import java.util.*;
+import java.util.Stack;
 
 public class Injury extends JFrame {
     final private Font font = new Font("Arial", Font.BOLD, 15);
@@ -14,9 +15,9 @@ public class Injury extends JFrame {
     private JPanel navigationPanel, sidebarPanel, contentPanel;
     private JTextField injuryField;
     private JComboBox<String> playerField;
-    private DefaultListModel<String> injuryListModel, recoveredListModel;
-    private JList<String> injuryList, recoveredList;
-    private Queue<String> injuryQueue, recoveredQueue;
+    private DefaultTableModel injuryTableModel, recoveredTableModel;
+    private JTable injuryTable, recoveredTable;
+    private Stack<String> injuryStack, recoveredStack;
 
     public Injury() {
         initialize();
@@ -94,23 +95,22 @@ public class Injury extends JFrame {
         btnPanel.add(addButton);
         inputPanel.add(btnPanel);
 
-        injuryListModel = new DefaultListModel<>();
-        recoveredListModel = new DefaultListModel<>();
-        injuryList = new JList<>(injuryListModel);
-        recoveredList = new JList<>(recoveredListModel);
-        injuryQueue = new LinkedList<>();
-        recoveredQueue = new LinkedList<>();
+        injuryStack = new Stack<>();
+        recoveredStack = new Stack<>();
 
-        injuryList.setPreferredSize(new Dimension(50, 200));
-        recoveredList.setPreferredSize(new Dimension(400, 500));
+        injuryTableModel = new DefaultTableModel(new String[]{"Player", "Injury"}, 0);
+        recoveredTableModel = new DefaultTableModel(new String[]{"Player", "Injury"}, 0);
+
+        injuryTable = new JTable(injuryTableModel);
+        recoveredTable = new JTable(recoveredTableModel);
 
         JPanel injuryPanel = new JPanel(new BorderLayout());
         injuryPanel.setBorder(new TitledBorder("Injury Reserve Queue"));
-        injuryPanel.add(new JScrollPane(injuryList), BorderLayout.CENTER);
+        injuryPanel.add(new JScrollPane(injuryTable), BorderLayout.CENTER);
 
         JPanel recoveredPanel = new JPanel(new BorderLayout());
         recoveredPanel.setBorder(new TitledBorder("Recovered Queue"));
-        recoveredPanel.add(new JScrollPane(recoveredList), BorderLayout.CENTER);
+        recoveredPanel.add(new JScrollPane(recoveredTable), BorderLayout.CENTER);
 
         JPanel listPanel = new JPanel(new GridLayout(1, 2, 10, 50));
         listPanel.add(injuryPanel);
@@ -137,16 +137,45 @@ public class Injury extends JFrame {
         getContentPane().add(sidebarPanel, BorderLayout.WEST);
         getContentPane().add(contentPanel, BorderLayout.CENTER);
 
+        loadInjuryData(); // Load the injury data into JTable
+
         setVisible(true);
     }
 
+    private void loadInjuryData() {
+        String jdbcUrl = "jdbc:mysql://localhost:3306/nbamanager";
+        String username = "useract";
+        String password = "welcome1";
+    
+        try (Connection con = DriverManager.getConnection(jdbcUrl, username, password)) {
+            String sql = "SELECT * FROM injuryStack";
+            Statement statement = con.createStatement();
+            ResultSet rs = statement.executeQuery(sql);
+    
+            while (rs.next()) {
+                String playername = rs.getString("name");
+                String injury = rs.getString("injury");
+                int status = rs.getInt("status");
+                if(status == 1){
+                    injuryStack.push(playername + "|" + injury);
+                    injuryTableModel.addRow(new Object[]{playername, injury});
+                }else{
+                    recoveredStack.push(playername + "|" + injury);
+                    recoveredTableModel.addRow(new Object[]{playername, injury});
+                } 
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+    
     private void loadPlayerName() {
         String jdbcUrl = "jdbc:mysql://localhost:3306/nbamanager";
         String username = "useract";
         String password = "welcome1";
 
         try (Connection con = DriverManager.getConnection(jdbcUrl, username, password)) {
-            String sql = "SELECT name FROM players";
+            String sql = "SELECT name FROM team_players WHERE name NOT IN (SELECT name FROM injuryStack)";
             Statement statement = con.createStatement();
             ResultSet rs = statement.executeQuery(sql);
 
@@ -160,29 +189,67 @@ public class Injury extends JFrame {
     }
 
     private void addToInjuryList() {
+        String jdbcUrl = "jdbc:mysql://localhost:3306/nbamanager";
+        String username = "useract";
+        String password = "welcome1";
         String playername = (String) playerField.getSelectedItem();
         String injury = injuryField.getText();
-
-        if (playername != null && !injury.isEmpty()) {
-            // String entry = "Player : " + playername + "         Injury : " + injury;
-            String entry = String.format("Player: %-20s|           Injury: %-20s", playername, injury);
-            injuryQueue.add(entry);
-            injuryListModel.addElement(entry);
+        
+        if(injury == null || injury.trim().isEmpty()){
+            JOptionPane.showMessageDialog(this, "Please enter a valid injury.");
+            return;
         }
-        JOptionPane.showMessageDialog(this, "Player \"" + playername + "\" added to Injury Reserve.");
-        injuryField.setText("");
+        try(Connection con = DriverManager.getConnection(jdbcUrl, username, password)){
+            String sql = "INSERT INTO injuryStack (name, injury, status) VALUES (?, ?, ?)";
+            PreparedStatement ps = con.prepareStatement(sql);
+
+            ps.setString(1, playername);
+            ps.setString(2, injury);
+            ps.setInt(3, 1);
+
+            int result = ps.executeUpdate();
+
+            if(result > 0){
+                if (playername != null && !injury.isEmpty()) {
+                    injuryStack.push(playername + "|" + injury);
+                    injuryTableModel.addRow(new Object[]{playername, injury});
+                }
+                JOptionPane.showMessageDialog(this, "Player \"" + playername + "\" added to Injury Reserve.");
+                injuryField.setText("");
+            }
+        }catch(SQLException e){
+            e.printStackTrace();
+        }
     }
 
     private void rmvFromInjuryList() {
-        String removedPlayer = injuryQueue.poll();
-
-        if (removedPlayer != null) {
-            injuryListModel.removeElement(removedPlayer);
-            recoveredQueue.add(removedPlayer);
-            recoveredListModel.addElement(removedPlayer);
+        if (!injuryStack.isEmpty()) {
+            String[] entry = injuryStack.remove(0).split("\\|");
+            recoveredStack.push(entry[0] + "|" + entry[1]);
+    
+            String playername = entry[0];
+    
+            String jdbcUrl = "jdbc:mysql://localhost:3306/nbamanager";
+            String username = "useract";
+            String password = "welcome1";
+    
+            try (Connection con = DriverManager.getConnection(jdbcUrl, username, password)) {
+                String sql = "UPDATE injuryStack SET status = 0 WHERE name = ?";
+                PreparedStatement ps = con.prepareStatement(sql);
+                ps.setString(1, playername);
+                
+                int result = ps.executeUpdate();
+                
+                if (result > 0) {
+                    injuryTableModel.removeRow(0);
+                    recoveredTableModel.addRow(new Object[]{entry[0], entry[1]});
+                    JOptionPane.showMessageDialog(this, "Player \"" + entry[0] + "\" has been cleared to play.");
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
         }
-        JOptionPane.showMessageDialog(this, "Player \"" + removedPlayer + "\" has been cleared to play.");
-    }
+    }    
 
     private void handleSidebarButtonClick(String label) {
         switch (label) {
@@ -190,16 +257,16 @@ public class Injury extends JFrame {
                 new Home();
                 break;
             case "TEAM":
-                new Temp();
+                new MyTeam();
                 break;
             case "PLAYER":
-                new Temp();
+                new Player_();
                 break;
             case "JOURNEY":
                 new Temp();
                 break;
             case "CONTRACT":
-                new Temp();
+                new MyContract();
                 break;
             case "INJURY":
                 new Injury();
