@@ -220,13 +220,13 @@ public class MyTeam extends JFrame {
                 new MyTeam();
                 break;
             case "PLAYER":
-                new Player_(); 
+                new MyPlayer(); 
                 break;
             case "JOURNEY":
                 new Temp();
                 break;
             case "CONTRACT":
-                new Contract();
+                new MyContract();
                 break;
             case "INJURY":
                 new Injury();
