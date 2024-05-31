@@ -5,7 +5,6 @@ import java.text.*;
 import java.util.*;
 import java.util.Date;
 import java.util.Queue;
-
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import javax.swing.table.DefaultTableCellRenderer;
@@ -277,20 +276,17 @@ public class MyContract extends JFrame {
                 currentDate.add(Calendar.YEAR, 1);
                 java.util.Date oneYearLater = currentDate.getTime();
 
-                // Check if the new expiry date is at least one year from the current date
                 if (newExpiryDate.before(oneYearLater)) {
                     JOptionPane.showMessageDialog(this, "The new contract expiration date must be at least one year from today.");
-                    return false; // Return false to indicate the date is not valid
+                    return false;
                 }
 
-                // Update the player's expiration date
                 player.setExpiryDate(newExpiryDate);
 
                 String jdbcUrl = "jdbc:mysql://localhost:3306/nbamanager";
                 String username = "useract";
                 String password = "welcome1";
 
-                // Update the database
                 try (Connection con = DriverManager.getConnection(jdbcUrl, username, password)) {
                     String sql = "UPDATE players_stat_23_24 SET contract_expiration_date = ? WHERE name = ?";
                     PreparedStatement preparedStatement = con.prepareStatement(sql);
@@ -299,19 +295,19 @@ public class MyContract extends JFrame {
                     preparedStatement.executeUpdate();
 
                     JOptionPane.showMessageDialog(this, "Contract expiration date for player \"" + player.getName() + "\" has been extended to " + newExpiryDate + ".");
-                    return true; // Return true to indicate the date was successfully parsed and set
+                    return true;
                 } catch (SQLException e) {
                     e.printStackTrace();
                     JOptionPane.showMessageDialog(this, "Failed to update the database. Please try again.");
-                    return false; // Return false to indicate database update failed
+                    return false; 
                 }
             } catch (ParseException e) {
                 JOptionPane.showMessageDialog(this, "Invalid date format. Please enter the date in YYYY-MM-DD format.");
-                return false; // Return false to indicate invalid date format
+                return false; 
             }
         } else {
             JOptionPane.showMessageDialog(this, "No date entered. Player remains in the Contract Extension Queue.");
-            return false; // Return false to indicate no date was entered
+            return false;
         }
     }
 
@@ -325,13 +321,13 @@ public class MyContract extends JFrame {
                 new MyTeam();
                 break;
             case "PLAYER":
-                new Player_(); 
+                new MyPlayer(); 
                 break;
             case "JOURNEY":
                 new Temp();
                 break;
             case "CONTRACT":
-                new Contract();
+                new MyContract();
                 break;
             case "INJURY":
                 new Injury();
@@ -374,7 +370,7 @@ public class MyContract extends JFrame {
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
-            new Contract();
+            new MyContract();
         });
     }
 }
