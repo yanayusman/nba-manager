@@ -81,13 +81,20 @@ public class JourneyGraph extends JFrame {
         //contentPanel.setPreferredSize(new Dimension(50, 500));
 
         //map image panel
-        JLabel imageLabel = loadImage("NBAMap.png", true,450, 260);
+        JLabel imageLabel = loadImage("NBAMap.jpg", true,450, 260);
         JPanel mapPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         mapPanel.add(imageLabel);
         
         routeDistance = new RouteDistance<>(JourneyRoutes()); // Assuming map1 is the graph used for route calculation
         String startCity = "San Antonio(Spurs)";
-
+/* 
+        tableModel = new DefaultTableModel(new Object[]{"Route", "Distance (km)"}, 0);
+        routeTable = new JTable(tableModel);
+        routeTable.getColumnModel().getColumn(0).setPreferredWidth(300);
+        routeTable.getColumnModel().getColumn(1).setPreferredWidth(200);
+        //JScrollPane dfsPanel = new JScrollPane(routeTable);
+        //dfsPanel.setPreferredSize(new Dimension(500, 150));
+        */
         ArrayList<ArrayList<String>> dfsRoutes = routeDistance.depthFirstSearch(startCity);
         int[] totalDistance = new int[dfsRoutes.size()];;
         int i=0;
@@ -103,8 +110,10 @@ public class JourneyGraph extends JFrame {
         
         JLabel bestRouteLabel = new JLabel("Best Route:");
         bestRouteLabel.setFont(new Font("Arial", Font.BOLD, 15));
-        
-if(!dfsRoutes.isEmpty()){
+        //bestRoutePanel.add(bestRouteLabel);
+       
+        //arrange so that the lowest distances at front array
+       if(!dfsRoutes.isEmpty()){
         int firstTotalDistance = totalDistance[0];
         for (ArrayList<String> route : dfsRoutes){
             if(firstTotalDistance==calculateTotalDistance(route, JourneyRoutes())){            
@@ -339,19 +348,19 @@ JPanel otherRoutesWrapperPanel = createBorderedPanel("O T H E R  R O U T E S : "
         String imageName="";
         switch(a){
             case(0):
-                imageName = "bestRouteMap.png";
+                imageName = "bestRouteMap.jpg";
                 break;
             case(1):
-                imageName = "routeMap2.png";
+                imageName = "routeMap2.jpg";
                 break;
             case(2):
-                imageName = "routeMap3.png";
+                imageName = "routeMap3.jpg";
                 break;
             case(3):
-                imageName = "routeMap4.png";
+                imageName = "routeMap4.jpg";
                 break;
             case(4):
-                imageName = "routeMap5.png";
+                imageName = "routeMap5.jpg";
                 break;
         }
         JLabel bestMapImage = loadImage(imageName, true,400, 250);
