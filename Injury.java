@@ -1,10 +1,13 @@
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import javax.swing.table.DefaultTableModel;
+
+import src.Team;
+
 import java.awt.*;
 import java.awt.event.*;
 import java.sql.*;
-import java.util.Stack;
+import java.util.*;
 
 public class Injury extends JFrame {
     final private Font font = new Font("Arial", Font.BOLD, 15);
@@ -17,10 +20,16 @@ public class Injury extends JFrame {
     private JComboBox<String> playerField;
     private DefaultTableModel injuryTableModel, recoveredTableModel;
     private JTable injuryTable, recoveredTable;
-    private Stack<String> injuryStack, recoveredStack;
+    private Stack<String> injuryStack, tempStack, recoveredStack;
+
+    private final String jdbcUrl = "jdbc:mysql://localhost:3306/nbamanager";
+    private final String username = "useract";
+    private final String password = "welcome1";
 
     public Injury() {
         initialize();
+        loadInjuryData();
+        loadRecoveredData();
     }
 
     public void initialize() {
@@ -95,21 +104,25 @@ public class Injury extends JFrame {
         btnPanel.add(addButton);
         inputPanel.add(btnPanel);
 
-        injuryStack = new Stack<>();
-        recoveredStack = new Stack<>();
+        String[] columnNames = {"Player Name", "Injury"};
 
-        injuryTableModel = new DefaultTableModel(new String[]{"Player", "Injury"}, 0);
-        recoveredTableModel = new DefaultTableModel(new String[]{"Player", "Injury"}, 0);
-
+        injuryTableModel = new DefaultTableModel(columnNames, 0);
+        recoveredTableModel = new DefaultTableModel(columnNames, 0);
         injuryTable = new JTable(injuryTableModel);
         recoveredTable = new JTable(recoveredTableModel);
+        injuryStack = new Stack<>();
+        tempStack = new Stack<>();
+        recoveredStack = new Stack<>();
+
+        injuryTable.setPreferredSize(new Dimension(50, 200));
+        recoveredTable.setPreferredSize(new Dimension(400, 500));
 
         JPanel injuryPanel = new JPanel(new BorderLayout());
-        injuryPanel.setBorder(new TitledBorder("Injury Reserve Queue"));
+        injuryPanel.setBorder(new TitledBorder("Injury Reserve Stack"));
         injuryPanel.add(new JScrollPane(injuryTable), BorderLayout.CENTER);
 
         JPanel recoveredPanel = new JPanel(new BorderLayout());
-        recoveredPanel.setBorder(new TitledBorder("Recovered Queue"));
+        recoveredPanel.setBorder(new TitledBorder("Recovered Stack"));
         recoveredPanel.add(new JScrollPane(recoveredTable), BorderLayout.CENTER);
 
         JPanel listPanel = new JPanel(new GridLayout(1, 2, 10, 50));
@@ -137,48 +150,17 @@ public class Injury extends JFrame {
         getContentPane().add(sidebarPanel, BorderLayout.WEST);
         getContentPane().add(contentPanel, BorderLayout.CENTER);
 
-        loadInjuryData(); // Load the injury data into JTable
-
         setVisible(true);
     }
 
-    private void loadInjuryData() {
-        String jdbcUrl = "jdbc:mysql://localhost:3306/nbamanager";
-        String username = "useract";
-        String password = "welcome1";
-    
-        try (Connection con = DriverManager.getConnection(jdbcUrl, username, password)) {
-            String sql = "SELECT * FROM injuryStack";
-            Statement statement = con.createStatement();
-            ResultSet rs = statement.executeQuery(sql);
-    
-            while (rs.next()) {
-                String playername = rs.getString("name");
-                String injury = rs.getString("injury");
-                int status = rs.getInt("status");
-                if(status == 1){
-                    injuryStack.push(playername + "|" + injury);
-                    injuryTableModel.addRow(new Object[]{playername, injury});
-                }else{
-                    recoveredStack.push(playername + "|" + injury);
-                    recoveredTableModel.addRow(new Object[]{playername, injury});
-                } 
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-    
     private void loadPlayerName() {
-        String jdbcUrl = "jdbc:mysql://localhost:3306/nbamanager";
-        String username = "useract";
-        String password = "welcome1";
-
+        playerField.removeAllItems();
+    
         try (Connection con = DriverManager.getConnection(jdbcUrl, username, password)) {
-            String sql = "SELECT name FROM team_players WHERE name NOT IN (SELECT name FROM injuryStack)";
+            String sql = "SELECT name FROM team_players WHERE name NOT IN (SELECT name FROM injuryStack WHERE status = 1)";
             Statement statement = con.createStatement();
             ResultSet rs = statement.executeQuery(sql);
-
+    
             while (rs.next()) {
                 String playername = rs.getString("name");
                 playerField.addItem(playername);
@@ -186,87 +168,144 @@ public class Injury extends JFrame {
         } catch (SQLException e) {
             e.printStackTrace();
         }
+        playerField.revalidate();
+        playerField.repaint();
     }
 
     private void addToInjuryList() {
-        String jdbcUrl = "jdbc:mysql://localhost:3306/nbamanager";
-        String username = "useract";
-        String password = "welcome1";
         String playername = (String) playerField.getSelectedItem();
         String injury = injuryField.getText();
         
         if(injury == null || injury.trim().isEmpty()){
-            JOptionPane.showMessageDialog(this, "Please enter a valid injury.");
-            return;
+                JOptionPane.showMessageDialog(this, "Please enter a valid injury.");
+                return;
         }
-        try(Connection con = DriverManager.getConnection(jdbcUrl, username, password)){
+
+        if (playername != null && !injury.isEmpty()) {
+            String entry = String.format("Player: %-20s|           Injury: %-20s", playername, injury);
+            injuryStack.push(entry);
+            injuryTableModel.addRow(new Object[]{playername, injury});
+            addToDatabase(playername, injury, 1);
+        }
+        JOptionPane.showMessageDialog(this, "Player \"" + playername + "\" added to Injury Reserve.");
+        injuryField.setText("");
+    
+        loadPlayerName();
+    }
+
+    private void addToDatabase(String playername, String injury, int status) {
+        try (Connection con = DriverManager.getConnection(jdbcUrl, username, password)) {
             String sql = "INSERT INTO injuryStack (name, injury, status) VALUES (?, ?, ?)";
-            PreparedStatement ps = con.prepareStatement(sql);
-
-            ps.setString(1, playername);
-            ps.setString(2, injury);
-            ps.setInt(3, 1);
-
-            int result = ps.executeUpdate();
-
-            if(result > 0){
-                if (playername != null && !injury.isEmpty()) {
-                    injuryStack.push(playername + "|" + injury);
-                    injuryTableModel.addRow(new Object[]{playername, injury});
-                }
-                JOptionPane.showMessageDialog(this, "Player \"" + playername + "\" added to Injury Reserve.");
-                injuryField.setText("");
-            }
-        }catch(SQLException e){
+            PreparedStatement pstmt = con.prepareStatement(sql);
+            pstmt.setString(1, playername);
+            pstmt.setString(2, injury);
+            pstmt.setInt(3, status);
+            pstmt.executeUpdate();
+        } catch (SQLException e) {
             e.printStackTrace();
         }
     }
 
     private void rmvFromInjuryList() {
-        if (!injuryStack.isEmpty()) {
-            String[] entry = injuryStack.remove(0).split("\\|");
-            recoveredStack.push(entry[0] + "|" + entry[1]);
-    
-            String playername = entry[0];
-    
-            String jdbcUrl = "jdbc:mysql://localhost:3306/nbamanager";
-            String username = "useract";
-            String password = "welcome1";
-    
-            try (Connection con = DriverManager.getConnection(jdbcUrl, username, password)) {
-                String sql = "UPDATE injuryStack SET status = 0 WHERE name = ?";
-                PreparedStatement ps = con.prepareStatement(sql);
-                ps.setString(1, playername);
-                
-                int result = ps.executeUpdate();
-                
-                if (result > 0) {
-                    injuryTableModel.removeRow(0);
-                    recoveredTableModel.addRow(new Object[]{entry[0], entry[1]});
-                    JOptionPane.showMessageDialog(this, "Player \"" + entry[0] + "\" has been cleared to play.");
-                }
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
+        // transfer elements from injuryStack to tempStack to reverse order
+        while (!injuryStack.isEmpty()) {
+            tempStack.push(injuryStack.pop());
         }
-    }    
+    
+        // pop the top element from tempStack (the first element added to injuryStack)
+        if (!tempStack.isEmpty()) {
+            String removedPlayer = tempStack.pop();
+            String[] parts = removedPlayer.split("\\|\\s+");
+            String playername = parts[0].split(":\\s+")[1].trim();
+            String injury = parts[1].split(":\\s+")[1].trim();
+    
+            // remove the first occurrence of the player from the injury table
+            for (int i = 0; i < injuryTableModel.getRowCount(); i++) {
+                if (injuryTableModel.getValueAt(i, 0).equals(playername) && injuryTableModel.getValueAt(i, 1).equals(injury)) {
+                    injuryTableModel.removeRow(i);
+                    break;
+                }
+            }
+    
+            recoveredStack.push(removedPlayer);
+            recoveredTableModel.addRow(new Object[]{playername, injury});
+            JOptionPane.showMessageDialog(this, "Player \"" + playername + "\" has been cleared to play.");
+            updateDatabase(playername, 0);
+        } else {
+            JOptionPane.showMessageDialog(this, "No players in the Injury Reserve.");
+        }
+    
+        // transfer elements back to injuryStack to maintain the order
+        while (!tempStack.isEmpty()) {
+            injuryStack.push(tempStack.pop());
+        }
+    
+        loadPlayerName();
+    }
+
+    private void updateDatabase(String playername, int status) {
+        try (Connection con = DriverManager.getConnection(jdbcUrl, username, password)) {
+            String sql = "UPDATE injuryStack SET status = ? WHERE name = ?";
+            PreparedStatement pstmt = con.prepareStatement(sql);
+            pstmt.setInt(1, status);
+            pstmt.setString(2, playername);
+            pstmt.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void loadInjuryData() {
+        try (Connection con = DriverManager.getConnection(jdbcUrl, username, password)) {
+            String sql = "SELECT name, injury FROM injuryStack WHERE status = 1";
+            Statement stmt = con.createStatement();
+            ResultSet rs = stmt.executeQuery(sql);
+
+            while (rs.next()) {
+                String playername = rs.getString("name");
+                String injury = rs.getString("injury");
+                injuryStack.push(String.format("Player: %-20s|           Injury: %-20s", playername, injury));
+                injuryTableModel.addRow(new Object[]{playername, injury});
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void loadRecoveredData() {
+        try (Connection con = DriverManager.getConnection(jdbcUrl, username, password)) {
+            String sql = "SELECT name, injury FROM injuryStack WHERE status = 0";
+            Statement stmt = con.createStatement();
+            ResultSet rs = stmt.executeQuery(sql);
+
+            while (rs.next()) {
+                String playername = rs.getString("name");
+                String injury = rs.getString("injury");
+                recoveredStack.push(String.format("Player: %-20s|           Injury: %-20s", playername, injury));
+                recoveredTableModel.addRow(new Object[]{playername, injury});
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
 
     private void handleSidebarButtonClick(String label) {
+        this.dispose();
         switch (label) {
             case "HOME":
                 new Home();
                 break;
             case "TEAM":
-                new MyTeam();
+                new Team();
                 break;
             case "PLAYER":
                 new Player_();
                 break;
             case "JOURNEY":
-                new Temp();
+                new JourneyGraph();
                 break;
             case "CONTRACT":
-                new MyContract();
+                new Contract();
                 break;
             case "INJURY":
                 new Injury();
