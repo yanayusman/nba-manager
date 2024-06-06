@@ -8,6 +8,8 @@ public class Player {
     public String weight;
     public String lastAttended;
     public String country;
+    public String label;
+    public String salary;
     public String imagePath;
 
     Player(){}
