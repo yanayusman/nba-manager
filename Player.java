@@ -10,6 +10,12 @@ public class Player {
     public String country;
     public String label;
     public String salary;
+    public double avgPoints;
+    public double rebounds;
+    public double steals;
+    public double assists;
+    public double blocks;
+    public double compositeScore;
     public String imagePath;
 
     Player(){}
