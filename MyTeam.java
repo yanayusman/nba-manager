@@ -16,6 +16,7 @@ public class MyTeam extends JFrame {
     private JPanel contentPanel;
     private JPanel searchPanel;
     private JPanel playersPanel;
+    private JTextField heightField, weightField, positionField;
 
     private String jdbcUrl = "jdbc:mysql://localhost:3306/nbamanager";
     private String username = "useract";
@@ -66,12 +67,12 @@ public class MyTeam extends JFrame {
         // Search Panel
         searchPanel = new JPanel();
         searchPanel.setBackground(Color.GRAY);
-        searchPanel.setPreferredSize(new Dimension(800, 50));
+        searchPanel.setPreferredSize(new Dimension(800, 70));
 
         JLabel heightLabel = new JLabel("Height: ");
         heightLabel.setFont(font);
         searchPanel.add(heightLabel);
-        JTextField heightField = new JTextField();
+        heightField = new JTextField();
         heightField.setPreferredSize(new Dimension(100, 30));
         heightField.setFont(font);
         searchPanel.add(heightField);
@@ -79,7 +80,7 @@ public class MyTeam extends JFrame {
         JLabel weightLabel = new JLabel("Weight: ");
         weightLabel.setFont(font);
         searchPanel.add(weightLabel);
-        JTextField weightField = new JTextField();
+        weightField = new JTextField();
         weightField.setPreferredSize(new Dimension(100, 30));
         weightField.setFont(font);
         searchPanel.add(weightField);
@@ -87,12 +88,12 @@ public class MyTeam extends JFrame {
         JLabel positionLabel = new JLabel("Position: ");
         positionLabel.setFont(font);
         searchPanel.add(positionLabel);
-        JTextField positionField = new JTextField();
+        positionField = new JTextField();
         positionField.setPreferredSize(new Dimension(100, 30));
         positionField.setFont(font);
         searchPanel.add(positionField);
 
-        JButton searchButton = new JButton("Search");
+        JButton searchButton = new JButton("SEARCH");
         searchButton.setFont(font);
         searchButton.setPreferredSize(new Dimension(125, 45));
         searchButton.addActionListener(new ActionListener() {
@@ -107,7 +108,22 @@ public class MyTeam extends JFrame {
 
         JPanel searchButtonPanel = new JPanel();
         searchButtonPanel.setLayout(new FlowLayout(FlowLayout.CENTER));
+        searchButtonPanel.setBackground(Color.GRAY);
         searchButtonPanel.add(searchButton);
+
+        //rank button in searchBUttonPanel
+        JButton rankButton = new JButton("Ranking");
+        rankButton.setFont(font);
+        rankButton.setPreferredSize(new Dimension(125, 45));
+
+        rankButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                rankPlayers();
+            }
+        });
+
+        searchButtonPanel.add(rankButton);
         searchPanel.add(searchButtonPanel, BorderLayout.SOUTH);
 
         // Content Panel
@@ -137,6 +153,98 @@ public class MyTeam extends JFrame {
 
         setVisible(true);
     }
+
+    private void rankPlayers() {
+        List<Player> players = new ArrayList<>();
+    
+        try (Connection con = DriverManager.getConnection(jdbcUrl, username, password)) {
+            String sql = "SELECT tp.name, tp.position, ps.oreb, ps.dreb, ps.reb, ps.ast, ps.stl, ps.blk, ps.tov, ps.fg, ps.eff " +
+                         "FROM team_players tp " +
+                         "INNER JOIN players_stat_23_24 ps ON tp.name = ps.name";
+            Statement statement = con.createStatement();
+            ResultSet rs = statement.executeQuery(sql);
+    
+            while (rs.next()) {
+                Player player = new Player();
+                player.name = rs.getString("name");
+                player.position = rs.getString("position");
+                player.oreb = rs.getDouble("oreb");
+                player.dreb = rs.getDouble("dreb");
+                player.reb = rs.getDouble("reb");
+                player.ast = rs.getDouble("ast");
+                player.stl = rs.getDouble("stl");
+                player.blk = rs.getDouble("blk");
+                player.tov = rs.getDouble("tov");
+                player.fg = rs.getDouble("fg");
+                player.eff = rs.getDouble("eff");
+                players.add(player);
+            }
+    
+            rs.close();
+            statement.close();
+    
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    
+        for (Player player : players) {
+            calculateCompositeScore(player);
+        }
+    
+        players.sort(Comparator.comparingDouble((Player p) -> p.compositeScore).reversed());
+    
+        String[] columnNames = {"Rank", "Player Name", "Composite Score"};
+        Object[][] data = new Object[players.size()][3];
+    
+        for (int i = 0; i < players.size(); i++) {
+            Player player = players.get(i);
+            data[i][0] = i + 1;
+            data[i][1] = player.name;
+            data[i][2] = String.format("%.2f", player.compositeScore);
+        }
+    
+        JTable table = new JTable(data, columnNames);
+        JScrollPane scrollPane = new JScrollPane(table);
+        table.setFillsViewportHeight(true);
+    
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.add(scrollPane, BorderLayout.CENTER);
+    
+        JOptionPane.showMessageDialog(this, panel, "Player Rankings", JOptionPane.INFORMATION_MESSAGE);
+    }    
+
+    private void calculateCompositeScore(Player player) {
+        player.compositeScore = 0;
+        double weightPts = 0;
+        double weightReb = 0;
+        double weightAst = 0;
+        double weightStl = 0;
+        double weightBlk = 0;
+        String position = player.position;
+    
+        if (position.contains("G")) {
+            weightPts = 4;
+            weightAst = 2.5;
+            weightStl = 2;
+            weightBlk = 0.5;
+            weightReb = 1;
+        } else if (position.contains("F")) {
+            weightPts = 3.5;
+            weightReb = 3;
+            weightAst = 1.5;
+            weightStl = 1;
+            weightBlk = 1;
+        } else if (position.contains("C")) {
+            weightPts = 3;
+            weightReb = 4;
+            weightAst = 1;
+            weightStl = 0.5;
+            weightBlk = 1.5;
+        }
+    
+        player.compositeScore = player.pts * weightPts + player.reb * weightReb + player.ast * weightAst + player.stl * weightStl + player.blk * weightBlk;
+    }
+     
 
     private void searchPlayers(String height, String weight, String position) {
         List<Player> matchingPlayer = new ArrayList<>();
@@ -183,9 +291,13 @@ public class MyTeam extends JFrame {
         }else{
             JOptionPane.showMessageDialog(this, "No players found with the specified criteria", "No matches", JOptionPane.PLAIN_MESSAGE);
         }
+        heightField.setText("");
+        weightField.setText("");
+        positionField.setText("");
     }
 
-    private void loadPlayers() {  
+    private void loadPlayers() {
+        playersPanel.removeAll();
         try (Connection con = DriverManager.getConnection(jdbcUrl, username, password)) {
             String sql = "SELECT * FROM team_players";
             Statement statement = con.createStatement();
@@ -215,7 +327,7 @@ public class MyTeam extends JFrame {
                 playerPanel.setLayout(new BorderLayout());
                 playerPanel.setBorder(BorderFactory.createLineBorder(Color.BLACK));
     
-                //image
+                // Image
                 ImageIcon icon = new ImageIcon(player.imagePath);
                 Image img = icon.getImage();
                 Image newImg = img.getScaledInstance(100, 100, Image.SCALE_SMOOTH);
@@ -227,14 +339,12 @@ public class MyTeam extends JFrame {
                 JPanel namePanel = new JPanel(new BorderLayout());
                 JLabel nameLabel = new JLabel(player.name, JLabel.CENTER);
                 nameLabel.setFont(new Font("Arial", Font.BOLD, 15));
-                playerPanel.add(nameLabel, BorderLayout.SOUTH);
-
-                JButton removeButton = new JButton("Remove");
-                removeButton.addActionListener(e -> removePlayer(player));
-
                 namePanel.add(nameLabel, BorderLayout.CENTER);
+    
+                JButton removeButton = new JButton("REMOVE");
+                removeButton.addActionListener(e -> removePlayer(player));
                 namePanel.add(removeButton, BorderLayout.EAST);
-
+    
                 playerPanel.add(namePanel, BorderLayout.SOUTH);
     
                 playerPanel.addMouseListener(new MouseAdapter() {
@@ -254,21 +364,21 @@ public class MyTeam extends JFrame {
             e.printStackTrace();
         }
     }
-
-    private void removePlayer(Player player){
-        try(Connection con = DriverManager.getConnection(jdbcUrl, username, password)){
+    
+    private void removePlayer(Player player) {
+        try (Connection con = DriverManager.getConnection(jdbcUrl, username, password)) {
             String sql = "DELETE FROM team_players WHERE name = ?";
-
-            try(PreparedStatement ps = con.prepareStatement(sql)){
+    
+            try (PreparedStatement ps = con.prepareStatement(sql)) {
                 ps.setString(1, player.name);
                 ps.executeUpdate();
             }
-            contentPanel.removeAll();
+    
             loadPlayers();
-        }catch(SQLException e){
+        } catch (SQLException e) {
             e.printStackTrace();
         }
-    }
+    }    
 
     private void showPlayerDetails(Player player) {
         JDialog dialog = new JDialog(this, "Player Details", true);
