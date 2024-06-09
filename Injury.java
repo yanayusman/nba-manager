@@ -1,9 +1,6 @@
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import javax.swing.table.DefaultTableModel;
-
-import src.Team;
-
 import java.awt.*;
 import java.awt.event.*;
 import java.sql.*;
@@ -28,8 +25,8 @@ public class Injury extends JFrame {
 
     public Injury() {
         initialize();
-        loadInjuryData();
-        loadRecoveredData();
+        loadInjuryData(); // Load initial injury data
+        loadRecoveredData(); // Load initial recovered data
     }
 
     public void initialize() {
@@ -53,7 +50,7 @@ public class Injury extends JFrame {
         sidebarPanel.setBackground(Color.DARK_GRAY);
         sidebarPanel.setPreferredSize(new Dimension(200, 750));
 
-        String[] buttonLabels = {"HOME", "TEAM", "PLAYER", "JOURNEY", "CONTRACT", "INJURY"};
+        String[] buttonLabels = {"HOME", "TEAM", "PLAYER", "JOURNEY", "INJURY", "CONTRACT"};
 
         for (String label : buttonLabels) {
             JButton button = new JButton(label);
@@ -83,7 +80,7 @@ public class Injury extends JFrame {
         inputPanel.add(playerNameLabel);
         playerField = new JComboBox<>();
         playerField.setPreferredSize(new Dimension(100, 30));
-        loadPlayerName();
+        loadPlayerName(); // Load player names into the combo box
         inputPanel.add(playerField);
 
         JLabel injuryLabel = new JLabel("       Injury: ");
@@ -153,14 +150,19 @@ public class Injury extends JFrame {
         setVisible(true);
     }
 
+        /* 
+     * Method to load player names into the combo box.
+     * It fetches player names from the database table 'team_players'
+     * excluding those already in the injuryStack table with status = 1 (injured).
+     */
     private void loadPlayerName() {
         playerField.removeAllItems();
-    
+
         try (Connection con = DriverManager.getConnection(jdbcUrl, username, password)) {
             String sql = "SELECT name FROM team_players WHERE name NOT IN (SELECT name FROM injuryStack WHERE status = 1)";
             Statement statement = con.createStatement();
             ResultSet rs = statement.executeQuery(sql);
-    
+
             while (rs.next()) {
                 String playername = rs.getString("name");
                 playerField.addItem(playername);
@@ -172,82 +174,100 @@ public class Injury extends JFrame {
         playerField.repaint();
     }
 
+    /*
+     * Method to add a player to the injury list.
+     * It retrieves the selected player name from the combo box
+     * and the injury description from the text field.
+     * Then it adds the player to the injuryStack and updates the GUI and database accordingly.
+     */
     private void addToInjuryList() {
         String playername = (String) playerField.getSelectedItem();
         String injury = injuryField.getText();
-        
+
         if(injury == null || injury.trim().isEmpty()){
-                JOptionPane.showMessageDialog(this, "Please enter a valid injury.");
-                return;
+            JOptionPane.showMessageDialog(this, "Please enter a valid injury.");
+            return;
         }
 
         if (playername != null && !injury.isEmpty()) {
             String entry = String.format("Player: %-20s|           Injury: %-20s", playername, injury);
             injuryStack.push(entry);
             injuryTableModel.addRow(new Object[]{playername, injury});
-            addToDatabase(playername, injury, 1);
+            addToDatabase(playername, injury, 1); // Add to database with status 1 (injured)
         }
         JOptionPane.showMessageDialog(this, "Player \"" + playername + "\" added to Injury Reserve.");
         injuryField.setText("");
-    
-        loadPlayerName();
+
+        loadPlayerName(); // Reload player names
     }
 
+    /* 
+     * Method to add injury data to the database.
+     * It inserts a new row into the 'injuryStack' table with player name, injury, and status.
+     */
     private void addToDatabase(String playername, String injury, int status) {
         try (Connection con = DriverManager.getConnection(jdbcUrl, username, password)) {
             String sql = "INSERT INTO injuryStack (name, injury, status) VALUES (?, ?, ?)";
             PreparedStatement pstmt = con.prepareStatement(sql);
             pstmt.setString(1, playername);
             pstmt.setString(2, injury);
-            pstmt.setInt(3, status);
+            pstmt.setInt(3, status); // Status 1 indicates player is injured
             pstmt.executeUpdate();
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
 
+    /* 
+     * Method to remove a player from the injury list.
+     * It removes the player from the injuryStack and updates the GUI and database accordingly.
+     */
     private void rmvFromInjuryList() {
-        // transfer elements from injuryStack to tempStack to reverse order
+        // Transfer elements from injuryStack to tempStack to reverse order
         while (!injuryStack.isEmpty()) {
             tempStack.push(injuryStack.pop());
         }
-    
-        // pop the top element from tempStack (the first element added to injuryStack)
+
+        // Pop the top element from tempStack (the first element added to injuryStack)
         if (!tempStack.isEmpty()) {
             String removedPlayer = tempStack.pop();
             String[] parts = removedPlayer.split("\\|\\s+");
             String playername = parts[0].split(":\\s+")[1].trim();
             String injury = parts[1].split(":\\s+")[1].trim();
-    
-            // remove the first occurrence of the player from the injury table
+
+            // Remove the first occurrence of the player from the injury table
             for (int i = 0; i < injuryTableModel.getRowCount(); i++) {
                 if (injuryTableModel.getValueAt(i, 0).equals(playername) && injuryTableModel.getValueAt(i, 1).equals(injury)) {
                     injuryTableModel.removeRow(i);
                     break;
                 }
             }
-    
+
             recoveredStack.push(removedPlayer);
             recoveredTableModel.addRow(new Object[]{playername, injury});
             JOptionPane.showMessageDialog(this, "Player \"" + playername + "\" has been cleared to play.");
-            updateDatabase(playername, 0);
+            updateDatabase(playername, 0); // Update status to 0 (recovered)
         } else {
             JOptionPane.showMessageDialog(this, "No players in the Injury Reserve.");
         }
-    
-        // transfer elements back to injuryStack to maintain the order
+
+        // Transfer elements back to injuryStack to maintain the order
         while (!tempStack.isEmpty()) {
             injuryStack.push(tempStack.pop());
         }
-    
-        loadPlayerName();
+
+        loadPlayerName(); // Reload player names
     }
 
+    /* 
+     * Method to update player status in the database.
+     * It updates the status of the player in the 'injuryStack' table to indicate recovery.
+     */
     private void updateDatabase(String playername, int status) {
         try (Connection con = DriverManager.getConnection(jdbcUrl, username, password)) {
             String sql = "UPDATE injuryStack SET status = ? WHERE name = ?";
             PreparedStatement pstmt = con.prepareStatement(sql);
-            pstmt.setInt(1, status);
+            pstmt.setInt(1, status); // Update status to 0 (recovered)
             pstmt.setString(2, playername);
             pstmt.executeUpdate();
         } catch (SQLException e) {
@@ -255,9 +275,13 @@ public class Injury extends JFrame {
         }
     }
 
+    /* 
+     * Method to load initial injury data.
+     * It retrieves data from the 'injuryStack' table where status is 1 (indicating players are injured).
+     */
     private void loadInjuryData() {
         try (Connection con = DriverManager.getConnection(jdbcUrl, username, password)) {
-            String sql = "SELECT name, injury FROM injuryStack WHERE status = 1";
+            String sql = "SELECT name, injury FROM injuryStack WHERE status = 1"; // Fetch injured players
             Statement stmt = con.createStatement();
             ResultSet rs = stmt.executeQuery(sql);
 
@@ -272,9 +296,13 @@ public class Injury extends JFrame {
         }
     }
 
+    /* 
+     * Method to load initial recovered data.
+     * It retrieves data from the 'injuryStack' table where status is 0 (indicating players are recovered).
+     */
     private void loadRecoveredData() {
         try (Connection con = DriverManager.getConnection(jdbcUrl, username, password)) {
-            String sql = "SELECT name, injury FROM injuryStack WHERE status = 0";
+            String sql = "SELECT name, injury FROM injuryStack WHERE status = 0"; // Fetch recovered players
             Statement stmt = con.createStatement();
             ResultSet rs = stmt.executeQuery(sql);
 
@@ -299,16 +327,16 @@ public class Injury extends JFrame {
                 new Team();
                 break;
             case "PLAYER":
-                new Player_();
+                new Players(); 
                 break;
             case "JOURNEY":
                 new JourneyGraph();
                 break;
-            case "CONTRACT":
-                new Contract();
-                break;
             case "INJURY":
                 new Injury();
+                break;
+            case "CONTRACT":
+                new Contract();
                 break;
         }
     }
