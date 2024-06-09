@@ -1,4 +1,3 @@
-
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
@@ -18,7 +17,7 @@ import java.util.LinkedList;
 import static javax.swing.WindowConstants.EXIT_ON_CLOSE;
 
 public class JourneyGraph extends JFrame {
-    final private Font font = new Font("Raleway", Font.PLAIN, 12);             // to customize font
+    final private Font font = new Font("Arial", Font.PLAIN, 12);             // to customize font
     final private Dimension dimension = new Dimension(150, 50);
     final private Dimension maxSize = new Dimension(600, 300);
     final private Dimension minSize = new Dimension(400, 100);
@@ -34,6 +33,7 @@ public class JourneyGraph extends JFrame {
         initialize();
     }
     
+    // method to initialize the UI components
     private void initialize() {
         setTitle("Journey Plan");                                               //name for every page
         setSize(1200, 800);
@@ -56,7 +56,7 @@ public class JourneyGraph extends JFrame {
         sidebarPanel.setBackground(Color.DARK_GRAY);
         sidebarPanel.setPreferredSize(new Dimension(200, 750));
 
-        String[] buttonLabels = {"HOME", "TEAM", "PLAYER", "JOURNEY", "CONTRACT", "INJURY"};
+        String[] buttonLabels = {"HOME", "TEAM", "PLAYER", "JOURNEY", "INJURY", "CONTRACT"};
 
         for (String label : buttonLabels) {
             JButton button = new JButton(label);
@@ -73,13 +73,14 @@ public class JourneyGraph extends JFrame {
             });
             sidebarPanel.add(button);
         }
+        // content panel
         contentPanel = new JPanel();
         contentPanel.setBackground(Color.WHITE);
         contentPanel.setOpaque(false);
         contentPanel.setLayout(new BorderLayout());
       
         //map image panel
-        JLabel imageLabel = loadImage("NBAMap.jpg", true,450, 260);
+        JLabel imageLabel = loadImage("NBAMap.png", true,450, 260);
         JPanel mapPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         mapPanel.add(imageLabel);
         
@@ -90,8 +91,8 @@ public class JourneyGraph extends JFrame {
         int[] totalDistance = new int[dfsRoutes.size()];;
         int i=0;
         for (ArrayList<String> route : dfsRoutes) {
-                        totalDistance[i] = calculateTotalDistance(route, JourneyRoutes());
-                        i++;
+            totalDistance[i] = calculateTotalDistance(route, JourneyRoutes());
+            i++;
         }
         Arrays.sort(totalDistance);
 
@@ -101,37 +102,38 @@ public class JourneyGraph extends JFrame {
         
         JLabel bestRouteLabel = new JLabel("Best Route:");
         bestRouteLabel.setFont(new Font("Arial", Font.BOLD, 15));
-        //bestRoutePanel.add(bestRouteLabel);
        
         //arrange so that the lowest distances at front array
-       if(!dfsRoutes.isEmpty()){
-        int firstTotalDistance = totalDistance[0];
-        for (ArrayList<String> route : dfsRoutes){
-            if(firstTotalDistance==calculateTotalDistance(route, JourneyRoutes())){            
-                StringBuilder firstFormattedRoute = new StringBuilder();
-            for (String city : route) {
-                firstFormattedRoute.append(city).append(" -> ");
-            }
-            firstFormattedRoute.setLength(firstFormattedRoute.length() - 4);
-            JLabel firstRouteLabel = new JLabel(firstFormattedRoute.toString()+ "-" +firstTotalDistance);
-           // firstRouteLabel.setPreferredSize(new Dimension(1000, 80)); // Set preferred size to accommodate the longer label
-            firstRouteLabel.setVerticalAlignment(SwingConstants.TOP); // Align label content to the top
-            firstRouteLabel.setHorizontalAlignment(SwingConstants.LEFT); // Align label content to the left
-            firstRouteLabel.setOpaque(false); // Ensure label is opaque so background color shows
-            firstRouteLabel.setBackground(Color.LIGHT_GRAY); // Set background color to match panel background
-            firstRouteLabel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5)); // Add padding
-            firstRouteLabel.setText("<html>" + 1 +". "+firstFormattedRoute.toString() + "<br>" +"Distance: "+ firstTotalDistance +" km"+ "</html>"); // Use HTML to create multiline label
-            firstRouteLabel.setFont(font);
-            bestRoutePanel.add(firstRouteLabel); 
+        if(!dfsRoutes.isEmpty()){
+            int firstTotalDistance = totalDistance[0];
+            for (ArrayList<String> route : dfsRoutes){
+                if(firstTotalDistance==calculateTotalDistance(route, JourneyRoutes())){            
+                    StringBuilder firstFormattedRoute = new StringBuilder();
+                for (String city : route) {
+                    firstFormattedRoute.append(city).append(" -> ");
+                }
+                firstFormattedRoute.setLength(firstFormattedRoute.length() - 4);
+                JLabel firstRouteLabel = new JLabel(firstFormattedRoute.toString()+ "-" +firstTotalDistance);
+                // firstRouteLabel.setPreferredSize(new Dimension(1000, 80)); // Set preferred size to accommodate the longer label
+                firstRouteLabel.setVerticalAlignment(SwingConstants.TOP); // Align label content to the top
+                firstRouteLabel.setHorizontalAlignment(SwingConstants.LEFT); // Align label content to the left
+                firstRouteLabel.setOpaque(false); // Ensure label is opaque so background color shows
+                firstRouteLabel.setBackground(Color.LIGHT_GRAY); // Set background color to match panel background
+                firstRouteLabel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5)); // Add padding
+                firstRouteLabel.setText("<html>" + 1 +". "+firstFormattedRoute.toString() + "<br>" +"Distance: "+ firstTotalDistance +" km"+ "</html>"); // Use HTML to create multiline label
+                firstRouteLabel.setFont(font);
+                bestRoutePanel.add(firstRouteLabel); 
 
-            JFrame bestMapFrame = new JFrame("Best Route Map");
-        
-            JButton bestButton = new JButton("View Map");
-            bestButton.addActionListener(e->showPopup(bestMapFrame,0,firstFormattedRoute));
+                JFrame bestMapFrame = new JFrame("Best Route Map");
             
-            bestRoutePanel.add(bestButton);
+                // display view map button
+                JButton bestButton = new JButton("View Map");
+                bestButton.addActionListener(e->showPopup(bestMapFrame,0,firstFormattedRoute));
+                
+                bestRoutePanel.add(bestButton);
+                }
+            }
         }
-    }}
         JPanel otherRoutesPanel = new JPanel();
         otherRoutesPanel.setLayout(new BoxLayout(otherRoutesPanel,1));
         
@@ -143,45 +145,45 @@ public class JourneyGraph extends JFrame {
             totalDistance[i] = calculateTotalDistance(route, JourneyRoutes());
             i++;
         }
-        Arrays.sort(totalDistance);//arrange so that the lowest distances at front array
+        
+        Arrays.sort(totalDistance);     //arrange so that the lowest distances at front array
         for(i=1; i<5; i++){
-        for (ArrayList<String> route : dfsRoutes){
-            StringBuilder formattedRoute = new StringBuilder();
-            if(totalDistance[i]==calculateTotalDistance(route, JourneyRoutes())){
-                for (String city : route) {
-                    formattedRoute.append(city).append(" -> ");
+            for (ArrayList<String> route : dfsRoutes){
+                StringBuilder formattedRoute = new StringBuilder();
+                if(totalDistance[i]==calculateTotalDistance(route, JourneyRoutes())){
+                    for (String city : route) {
+                        formattedRoute.append(city).append(" -> ");
+                    }
+                    formattedRoute.setLength(formattedRoute.length() - 4);
+                    JLabel routeLabel=new JLabel(formattedRoute.toString()+" - "+totalDistance[i]);
+                    routeLabel.setVerticalAlignment(SwingConstants.TOP); // Align label content to the top
+                    routeLabel.setHorizontalAlignment(SwingConstants.LEFT); // Align label content to the left
+                    routeLabel.setOpaque(false); // Ensure label is opaque so background color shows
+                    routeLabel.setBackground(Color.LIGHT_GRAY); // Set background color to match panel background
+                    routeLabel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5)); // Add padding
+                    routeLabel.setText("<html>" + (i+1) +". " + formattedRoute.toString() + "<br>" +"Distance: "+ totalDistance[i] + " km"+"</html>"); // Use HTML to create multiline label
+                    routeLabel.setFont(font);
+                    otherRoutesPanel.add(routeLabel); 
+                    
+                    JFrame MapFrame = new JFrame("Route "+(i+1) +" Map");
+            
+                    JButton Button = new JButton("View Map");
+                    int routeIndex =i;
+                    Button.addActionListener(e->showPopup(MapFrame,routeIndex,formattedRoute));
+                    
+                    otherRoutesPanel.add(Button);
                 }
-                formattedRoute.setLength(formattedRoute.length() - 4);
-                JLabel routeLabel=new JLabel(formattedRoute.toString()+" - "+totalDistance[i]);
-                //routeLabel.setPreferredSize(new Dimension(1000, 80)); // Set preferred size to accommodate the longer label
-                routeLabel.setVerticalAlignment(SwingConstants.TOP); // Align label content to the top
-                routeLabel.setHorizontalAlignment(SwingConstants.LEFT); // Align label content to the left
-                routeLabel.setOpaque(false); // Ensure label is opaque so background color shows
-                routeLabel.setBackground(Color.LIGHT_GRAY); // Set background color to match panel background
-                routeLabel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5)); // Add padding
-                routeLabel.setText("<html>" + (i+1) +". " + formattedRoute.toString() + "<br>" +"Distance: "+ totalDistance[i] + " km"+"</html>"); // Use HTML to create multiline label
-                routeLabel.setFont(font);
-                otherRoutesPanel.add(routeLabel); 
-                
-                JFrame MapFrame = new JFrame("Route "+(i+1) +" Map");
-         
-                JButton Button = new JButton("View Map");
-                int routeIndex =i;
-                Button.addActionListener(e->showPopup(MapFrame,routeIndex,formattedRoute));
-                
-                otherRoutesPanel.add(Button);
             }
         }
-    }
+        // added map panel to content panel
         contentPanel.add(mapPanel,BorderLayout.NORTH);
        
         JPanel bestRouteWrapperPanel = createBorderedPanel("B E S T  R O U T E : ");
         bestRouteWrapperPanel.add(bestRoutePanel, BorderLayout.CENTER);
       
-JPanel otherRoutesWrapperPanel = createBorderedPanel("O T H E R  R O U T E S : ");
+        JPanel otherRoutesWrapperPanel = createBorderedPanel("O T H E R  R O U T E S : ");
         otherRoutesWrapperPanel.add(otherRoutesPanel, BorderLayout.CENTER);
 
-         
         JPanel routePanels = new JPanel();
         routePanels.setLayout(new BoxLayout(routePanels, BoxLayout.X_AXIS));;
         routePanels.add(bestRouteWrapperPanel);
@@ -197,37 +199,38 @@ JPanel otherRoutesWrapperPanel = createBorderedPanel("O T H E R  R O U T E S : "
     }
 
     private JPanel createBorderedPanel(String title) {
-    JPanel panel = new JPanel();
-    panel.setLayout(new BorderLayout());
-    
-    // Create an empty border with padding around the panel
-    EmptyBorder border = new EmptyBorder(10, 10, 10, 10); // Adjust padding as needed
-    panel.setBorder(border);
-    
-    // Add a titled border to the panel
-    TitledBorder titledBorder = new TitledBorder(title);
-    titledBorder.setTitlePosition(TitledBorder.DEFAULT_POSITION);
-    panel.setBorder(BorderFactory.createCompoundBorder(titledBorder, BorderFactory.createEmptyBorder(5, 5, 5, 5))); // Adjust padding as needed
-    
-    return panel;
-}
+        JPanel panel = new JPanel();
+        panel.setLayout(new BorderLayout());
+        
+        // Create an empty border with padding around the panel
+        EmptyBorder border = new EmptyBorder(10, 10, 10, 10); // Adjust padding as needed
+        panel.setBorder(border);
+        
+        // Add a titled border to the panel
+        TitledBorder titledBorder = new TitledBorder(title);
+        titledBorder.setTitlePosition(TitledBorder.DEFAULT_POSITION);
+        panel.setBorder(BorderFactory.createCompoundBorder(titledBorder, BorderFactory.createEmptyBorder(5, 5, 5, 5))); // Adjust padding as needed
+        
+        return panel;
+    }
+
     private void showPopup(JFrame frame, int a, StringBuilder b){
         String imageName="";
         switch(a){
             case(0):
-                imageName = "bestRouteMap.jpg";
+                imageName = "bestRouteMap.png";
                 break;
             case(1):
-                imageName = "routeMap2.jpg";
+                imageName = "routeMap2.png";
                 break;
             case(2):
-                imageName = "routeMap3.jpg";
+                imageName = "routeMap3.png";
                 break;
             case(3):
-                imageName = "routeMap4.jpg";
+                imageName = "routeMap4.png";
                 break;
             case(4):
-                imageName = "routeMap5.jpg";
+                imageName = "routeMap5.png";
                 break;
         }
         JLabel bestMapImage = loadImage(imageName, true,400, 250);
@@ -236,20 +239,20 @@ JPanel otherRoutesWrapperPanel = createBorderedPanel("O T H E R  R O U T E S : "
 
         String[] bStrings = b.toString().split("->");
         StringBuilder route = new StringBuilder();
-            for (String city : bStrings) {
-                route.append(city).append("<br>");
-            }
+        for (String city : bStrings) {
+            route.append(city).append("<br>");
+        }
+        
         JLabel routeLabel = new JLabel(route.toString());
         routeLabel.setText("<html>"+ route.toString() + "<br>" + "</html>"); // Use HTML to create multiline label
         routeLabel.setFont(new Font("Monospace", Font.BOLD, 14));
         panel.add(routeLabel);
         panel.add(bestMapImage);
-      
 
         JOptionPane.showMessageDialog(frame, panel, "Best Route Map", JOptionPane.PLAIN_MESSAGE);
-      
     }
 
+    // calculate total distance of the route
     private static int calculateTotalDistance(ArrayList<String> journey, Map<String, Integer> map) {
         int totalDistance = 0;
         for (int i = 0; i < journey.size() - 1; i++) {
@@ -267,22 +270,24 @@ JPanel otherRoutesWrapperPanel = createBorderedPanel("O T H E R  R O U T E S : "
                 new Home();
                 break;
             case "TEAM":
-                new MyTeam();
+                new Team();
                 break;
             case "PLAYER":
-                new MyPlayer(); 
+                new Players(); 
                 break;
             case "JOURNEY":
                 new JourneyGraph();
                 break;
-            case "CONTRACT":
-                new Contract();
-                break;
             case "INJURY":
                 new Injury();
                 break;
+            case "CONTRACT":
+                new Contract();
+                break;
         }
     }
+
+    // load map image
     private JLabel loadImage(String fileName, boolean isResized, int targetWidth, int targetHeight) {
         BufferedImage image;
         JLabel imageContainer;
@@ -351,9 +356,16 @@ JPanel otherRoutesWrapperPanel = createBorderedPanel("O T H E R  R O U T E S : "
         map1.printRoutes();
 
         return map1;
-            }
-
     }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> {
+            new JourneyGraph();
+        });
+    }
+}
+
+// city class using graph method
 class City <T extends Comparable<T>, N extends Comparable<N>>{
     T cityName;
     int indeg;
@@ -376,6 +388,8 @@ class City <T extends Comparable<T>, N extends Comparable<N>>{
         firstRoute = null;
     }
 }
+
+// route class using graph method
 class Route<T extends Comparable<T>, N extends Comparable<N>>{
     City<T,N> toCity;
     N weight;
@@ -393,6 +407,7 @@ class Route<T extends Comparable<T>, N extends Comparable<N>>{
     }
 }
 
+// map class using graph method
 class Map<T extends Comparable<T>, N extends Comparable<N>> {
     City<T,N> head;
     int size;
@@ -404,30 +419,30 @@ class Map<T extends Comparable<T>, N extends Comparable<N>> {
         return this.size;
     }
     public boolean hasCity(T c){
-        if(head==null)//if head is null, theother is also null, auto no city
+        if(head==null)  //if head is null, theother is also null, auto no city
             return false;
         City<T,N> temp=head;
-        while(temp!=null){//if head already has a city, the loop will start
+        while(temp!=null){  //if head already has a city, the loop will start
             if(temp.cityName.compareTo(c)==0)
                 return true;
-            temp=temp.nextCity;//iterate through the city class instance to find a city that has the same info
+            temp=temp.nextCity; //iterate through the city class instance to find a city that has the same info
         }return false;
     }
     public boolean addCity(T c){
-        if(hasCity(c)==false){//no such city exist yet
+        if(hasCity(c)==false){  //no such city exist yet
             City<T,N> temp = head;
-            City<T,N> newCity= new City<>(c, null);//make a new City(node) with the info
-            if(head==null)//if head has no city yet, head takes the newcity node
+            City<T,N> newCity= new City<>(c, null); //make a new City(node) with the info
+            if(head==null)  //if head has no city yet, head takes the newcity node
                 head=newCity;
-            else{//head already has a city
+            else{   //head already has a city
                 City<T,N> previous = head;
                 while(temp!=null){
                     previous=temp;
-                    temp=temp.nextCity;//iterate throughthe city until the last city
+                    temp=temp.nextCity; //iterate throughthe city until the last city
                 }previous.nextCity=newCity;
             }size++;
             return true;
-        }else//city already exist
+        }else   //city already exist
             return false;
     }
     public ArrayList<T> getAllCity(){
