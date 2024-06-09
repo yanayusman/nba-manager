@@ -20,12 +20,12 @@ public class Home extends JFrame {
 
     public void intialize() {
         setTitle("Home");
-        setSize(900, 800);
+        setSize(1200, 800);
         setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
         setVisible(true);
 
-        // Navigation Panel
+        // navigation Panel
         navigationPanel = new JPanel();
         navigationPanel.setBackground(Color.LIGHT_GRAY);
         navigationPanel.setPreferredSize(new Dimension(800, 50));
@@ -36,14 +36,12 @@ public class Home extends JFrame {
         titleLabel.setFont(new Font("Arial", Font.BOLD, 20));
         navigationPanel.add(titleLabel);
 
-        
-
-        // Sidebar Panel
+        // sidebar Panel
         sidebarPanel = new JPanel();
         sidebarPanel.setLayout(new BoxLayout(sidebarPanel, BoxLayout.Y_AXIS));
         sidebarPanel.setBackground(Color.DARK_GRAY);
         sidebarPanel.setPreferredSize(new Dimension(200, 600));
-        String[] buttonLabels = {"HOME", "TEAM", "PLAYER", "JOURNEY", "CONTRACT", "INJURY"};
+        String[] buttonLabels = {"HOME", "TEAM", "PLAYER", "JOURNEY", "INJURY", "CONTRACT"};
 
         for (String label : buttonLabels) {
             JButton button = new JButton(label);
@@ -61,7 +59,7 @@ public class Home extends JFrame {
             sidebarPanel.add(button);
         }
 
-        // Content Panel
+        // content Panel
         contentPanel = new JPanel();
         contentPanel.setBackground(Color.WHITE);
         contentPanel.setLayout(new FlowLayout());
@@ -73,25 +71,27 @@ public class Home extends JFrame {
         getContentPane().add(contentPanel, BorderLayout.CENTER);
     }
 
+    // to handle side button when its clicked
     private void handleSidebarButtonClick(String label) {
+        this.dispose();
         switch (label) {
             case "HOME":
                 new Home();
                 break;
             case "TEAM":
-                new Temp();
+                new Team();
                 break;
             case "PLAYER":
-                new Temp(); 
+                new Players(); 
                 break;
             case "JOURNEY":
-                new Temp();
-                break;
-            case "CONTRACT":
-                new Temp();
+                new JourneyGraph();
                 break;
             case "INJURY":
-                new InjuryReserveManagement();
+                new Injury();
+                break;
+            case "CONTRACT":
+                new Contract();
                 break;
         }
     }
