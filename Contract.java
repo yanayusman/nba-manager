@@ -1,6 +1,3 @@
-
-package test;
-
 import java.awt.*;
 import java.awt.event.*;
 import java.sql.*;
@@ -25,11 +22,12 @@ public class Contract extends JFrame {
     private JTable contractTable, renewedTable;
     private PriorityQueue<Player> contractQueue;
     private Queue<Player> renewedQueue;
-    private Map<String, Player> playerMap = new HashMap<>();
+    private HashMap<String, Player> playerMap = new HashMap<>();
     
+    // Database connection details
     private final String jdbcUrl = "jdbc:mysql://localhost:3306/nbamanager";
-    private final String username = "root";
-    private final String password = "";
+    private final String username = "useract";
+    private final String password = "welcome1";
 
     public Contract() {
         initialize();
@@ -58,7 +56,7 @@ public class Contract extends JFrame {
         sidebarPanel.setBackground(Color.DARK_GRAY);
         sidebarPanel.setPreferredSize(new Dimension(200, 750));
 
-        String[] buttonLabels = {"HOME", "TEAM", "PLAYER", "JOURNEY", "CONTRACT", "INJURY"};
+        String[] buttonLabels = {"HOME", "TEAM", "PLAYER", "JOURNEY", "INJURY", "CONTRACT"};
 
         for (String label : buttonLabels) {
             JButton button = new JButton(label);
@@ -168,7 +166,11 @@ public class Contract extends JFrame {
         setVisible(true);
     }
 
-    // Reloads player names into the dropdown and exclude those already in the queue
+    /* 
+     * Reloads player names into the dropdown and excludes those already in the queue.
+     * It fetches player names from the database table 'team_players' 
+     * excluding those already in the 'contract_status' table with status 'active' or 'renewed'.
+     */
     private void loadPlayerName() {
 
         try (Connection con = DriverManager.getConnection(jdbcUrl, username, password)) {
@@ -188,7 +190,10 @@ public class Contract extends JFrame {
         }
     }
 
-    // When adding to the contract list
+    /*
+     * When adding to the contract list.
+     * It retrieves the selected player name from the dropdown and adds the player to the contractQueue.
+     */
     private void addToContractList() {
         String playername = (String) playerField.getSelectedItem();
         if (playername != null && !playerMap.containsKey(playername)) {
@@ -208,7 +213,10 @@ public class Contract extends JFrame {
         }
     }
 
-    // Method to add player to database
+    /* 
+     * Method to add player to the database.
+     * It inserts a new row into the 'contract_status' table with player details and status 'active'.
+     */
     private boolean addToDatabase(Player player) {
 
         try (Connection con = DriverManager.getConnection(jdbcUrl, username, password)) {
@@ -224,8 +232,11 @@ public class Contract extends JFrame {
             return false;
         }
     }
-
-    // Method to fetch player details from the database
+    
+    /* 
+     * Method to fetch player details from the database.
+     * It retrieves player details from the 'players_stat_23_24' table and caches them in the playerMap.
+     */
     private Player fetchPlayerDetails(String playername) {
         // Check if the player details are already cached in the map
         if (playerMap.get(playername) != null) {
@@ -251,7 +262,10 @@ public class Contract extends JFrame {
         return null;
     }
 
-    // Method to remove a player from the contract list and add to the renewed list
+    /* 
+     * Method to remove a player from the contract list and add to the renewed list.
+     * It removes the player from the contractQueue, updates the GUI and database accordingly.
+     */
     private void rmvFromContractList() {
         Player removedPlayer = contractQueue.poll(); // Remove the player with the highest priority
 
@@ -275,7 +289,10 @@ public class Contract extends JFrame {
         }
     }
 
-    // Method to update the player status and contract expiration date in the database
+    /* 
+     * Method to update the player status and contract expiration date in the database.
+     * It updates the status and expiration date of the player in the 'contract_status' table.
+     */
     private void updateDatabaseStatus(Player player, String status) {
         Connection con = null;
         PreparedStatement pstmt = null;
@@ -325,17 +342,26 @@ public class Contract extends JFrame {
         }
     }
 
-        // method to find a player in the table model
-        private int findPlayerIndexInTable(String playerName, DefaultTableModel model) {
-            for (int i = 0; i < model.getRowCount(); i++) {
-                if (model.getValueAt(i, 0).equals(playerName)) {
-                    return i;
-                }
+        /* 
+     * Method to find a player in the table model.
+     * It searches for the player's name in the specified table model and returns the index if found.
+     * If not found, it returns -1.
+     */
+    private int findPlayerIndexInTable(String playerName, DefaultTableModel model) {
+        for (int i = 0; i < model.getRowCount(); i++) {
+            if (model.getValueAt(i, 0).equals(playerName)) {
+                return i;
             }
-            return -1; // Player not found
         }
+        return -1; // Player not found
+    }
 
-    // Method to extend the contract expiration date of a player
+    /* 
+     * Method to extend the contract expiration date of a player.
+     * It prompts the user to enter a new expiration date for the player's contract,
+     * validates the input, updates the player's contract expiration date in the database,
+     * and returns true if successful, false otherwise.
+     */
     private boolean extendContractExpirationDate(Player player) {
         // Prompt the user to enter a new expiration date
         String newDateString = JOptionPane.showInputDialog(this, "Enter new contract expiration date (YYYY-MM-DD) for: " + player);
@@ -385,41 +411,49 @@ public class Contract extends JFrame {
         }
     }
 
+    /* 
+     * Method to load active contract data from the database.
+     * It retrieves active contract details from the 'contract_status' table and updates the contractQueue and GUI accordingly.
+     */
     private void loadContractData() {
-    try (Connection con = DriverManager.getConnection(jdbcUrl, username, password)) {
-        String sql = "SELECT player_name, efficiency, expiry_date FROM contract_status WHERE status = 'active'";
-        Statement stmt = con.createStatement();
-        ResultSet rs = stmt.executeQuery(sql);
-        contractQueue.clear();  // Clear existing data
-        while (rs.next()) {
-            String playerName = rs.getString("player_name");
-            int efficiency = rs.getInt("efficiency");
-            Date expiryDate = rs.getDate("expiry_date");
-            contractQueue.offer(new Player(playerName, efficiency, expiryDate));
-            contractTableModel.addRow(new Object[]{playerName, efficiency, expiryDate});
+        try (Connection con = DriverManager.getConnection(jdbcUrl, username, password)) {
+            String sql = "SELECT player_name, efficiency, expiry_date FROM contract_status WHERE status = 'active'";
+            Statement stmt = con.createStatement();
+            ResultSet rs = stmt.executeQuery(sql);
+            contractQueue.clear();  // Clear existing data
+            while (rs.next()) {
+                String playerName = rs.getString("player_name");
+                int efficiency = rs.getInt("efficiency");
+                Date expiryDate = rs.getDate("expiry_date");
+                contractQueue.offer(new Player(playerName, efficiency, expiryDate));
+                contractTableModel.addRow(new Object[]{playerName, efficiency, expiryDate});
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
-    } catch (SQLException e) {
-        e.printStackTrace();
     }
-}
 
-private void loadRenewedData() {
-    try (Connection con = DriverManager.getConnection(jdbcUrl, username, password)) {
-        String sql = "SELECT player_name, efficiency, expiry_date FROM contract_status WHERE status = 'renewed'";
-        Statement stmt = con.createStatement();
-        ResultSet rs = stmt.executeQuery(sql);
-        renewedQueue.clear();  // Clear existing data
-        while (rs.next()) {
-            String playerName = rs.getString("player_name");
-            int efficiency = rs.getInt("efficiency");
-            Date expiryDate = rs.getDate("expiry_date");
-            renewedQueue.offer(new Player(playerName, efficiency, expiryDate));
-            renewedTableModel.addRow(new Object[]{playerName, efficiency, expiryDate});
-        }
-    } catch (SQLException e) {
-        e.printStackTrace();
+    /* 
+     * Method to load renewed contract data from the database.
+     * It retrieves renewed contract details from the 'contract_status' table and updates the renewedQueue and GUI accordingly.
+     */
+    private void loadRenewedData() {
+        try (Connection con = DriverManager.getConnection(jdbcUrl, username, password)) {
+            String sql = "SELECT player_name, efficiency, expiry_date FROM contract_status WHERE status = 'renewed'";
+            Statement stmt = con.createStatement();
+            ResultSet rs = stmt.executeQuery(sql);
+            renewedQueue.clear();  // Clear existing data
+            while (rs.next()) {
+                String playerName = rs.getString("player_name");
+                int efficiency = rs.getInt("efficiency");
+                Date expiryDate = rs.getDate("expiry_date");
+                renewedQueue.offer(new Player(playerName, efficiency, expiryDate));
+                renewedTableModel.addRow(new Object[]{playerName, efficiency, expiryDate});
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }   
     }
-}
 
     private void handleSidebarButtonClick(String label) {
         this.dispose();
@@ -428,19 +462,19 @@ private void loadRenewedData() {
                 new Home();
                 break;
             case "TEAM":
-                new MyTeam();
+                new Team();
                 break;
             case "PLAYER":
-                new MyPlayer(); 
+                new Players(); 
                 break;
             case "JOURNEY":
-                new Temp();
-                break;
-            case "CONTRACT":
-                new Contract();
+                new JourneyGraph();
                 break;
             case "INJURY":
                 new Injury();
+                break;
+            case "CONTRACT":
+                new Contract();
                 break;
         }
     }
