@@ -174,7 +174,7 @@ public class Contract extends JFrame {
     private void loadPlayerName() {
 
         try (Connection con = DriverManager.getConnection(jdbcUrl, username, password)) {
-            String sql = "SELECT name FROM team_players WHERE name NOT IN (SELECT player_name FROM contract_status WHERE status = 'active' OR status = 'renewed')";
+            String sql = "SELECT name FROM team_players WHERE name NOT IN (SELECT player_name FROM contract_status WHERE status = 'active')";
             Statement statement = con.createStatement();
             ResultSet rs = statement.executeQuery(sql);
             playerField.removeAllItems(); // Clear previous items
