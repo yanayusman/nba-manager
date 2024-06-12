@@ -12,25 +12,33 @@ public class Home extends JFrame {
 
     private JPanel navigationPanel;
     private JPanel sidebarPanel;
-    private JPanel contentPanel;
+    private BackgroundPanel contentPanel;
+    private BufferedImage backgroundImage;
+    private BufferedImage nbaImage;
 
     public Home(){
-        intialize();
+        initialize();
     }
 
-    public void intialize() {
+    public void initialize() {
         setTitle("Home");
         setSize(1200, 800);
         setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
         setVisible(true);
 
+        // Load the background image
+        try {
+            backgroundImage = ImageIO.read(new File("NBA-Logo.png"));
+            nbaImage = loadImage("nba.png", true, 550, 250);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
         // navigation Panel
         navigationPanel = new JPanel();
         navigationPanel.setBackground(Color.LIGHT_GRAY);
         navigationPanel.setPreferredSize(new Dimension(800, 50));
-
-        JLabel imageLabel = loadImage("nba.png", true,700, 300);
 
         JLabel titleLabel = new JLabel("NBA Manager Game");
         titleLabel.setFont(new Font("Arial", Font.BOLD, 20));
@@ -59,11 +67,42 @@ public class Home extends JFrame {
             sidebarPanel.add(button);
         }
 
-        // content Panel
-        contentPanel = new JPanel();
-        contentPanel.setBackground(Color.WHITE);
-        contentPanel.setLayout(new FlowLayout());
+        // content Panel with background image
+        contentPanel = new BackgroundPanel();
+        contentPanel.setBackgroundImage(backgroundImage);
+        contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
+
+        // Adding NBA image
+        JLabel imageLabel = new JLabel(new ImageIcon(nbaImage));
+        imageLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        // Adding welcome message
+        JLabel welcomeLabel = new JLabel("<html>Welcome to the NBA Manager Game!<br>Build and manage your dream team to victory.</html>");
+        welcomeLabel.setFont(new Font("Monospaced", Font.BOLD, 25));
+        welcomeLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        welcomeLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        // Adding descriptive text
+        JLabel descriptionLabel = new JLabel("<html>Choose an option from the left sidebar to get started.<br>Manage your team, view player stats, track injuries, and more!</html>");
+        descriptionLabel.setFont(new Font("Arial", Font.PLAIN, 18));
+        descriptionLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        descriptionLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        // Adding a start label
+        JLabel startLabel = new JLabel("Get Started!");
+        startLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        startLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        startLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        contentPanel.add(Box.createVerticalGlue()); 
         contentPanel.add(imageLabel);
+        contentPanel.add(Box.createRigidArea(new Dimension(0, 20))); 
+        contentPanel.add(welcomeLabel);
+        contentPanel.add(Box.createRigidArea(new Dimension(0, 20))); 
+        contentPanel.add(descriptionLabel);
+        contentPanel.add(Box.createRigidArea(new Dimension(0, 20))); 
+        contentPanel.add(startLabel);
+        contentPanel.add(Box.createVerticalGlue()); 
 
         getContentPane().setLayout(new BorderLayout());
         getContentPane().add(navigationPanel, BorderLayout.NORTH);
@@ -71,7 +110,7 @@ public class Home extends JFrame {
         getContentPane().add(contentPanel, BorderLayout.CENTER);
     }
 
-    // to handle side button when its clicked
+    // to handle side button when it's clicked
     private void handleSidebarButtonClick(String label) {
         this.dispose();
         switch (label) {
@@ -82,7 +121,7 @@ public class Home extends JFrame {
                 new Team();
                 break;
             case "PLAYER":
-                new Players(); 
+                new Players();
                 break;
             case "JOURNEY":
                 new JourneyGraph();
@@ -96,10 +135,36 @@ public class Home extends JFrame {
         }
     }
 
+    // Custom JPanel to handle background image
+    class BackgroundPanel extends JPanel {
+        private BufferedImage image;
+
+        public void setBackgroundImage(BufferedImage image) {
+            this.image = image;
+            repaint();
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            if (image != null) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                int width = getWidth();
+                int height = getHeight();
+                g2d.drawImage(image, 0, 0, width, height, this);
+
+                // Apply a translucent overlay to fade the image
+                g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.5f));
+                g2d.setColor(getBackground());
+                g2d.fillRect(0, 0, width, height);
+                g2d.dispose();
+            }
+        }
+    }
+
     // load image
-    private JLabel loadImage(String fileName, boolean isResized, int targetWidth, int targetHeight) {
+    private BufferedImage loadImage(String fileName, boolean isResized, int targetWidth, int targetHeight) {
         BufferedImage image;
-        JLabel imageContainer;
 
         try {
             image = ImageIO.read(new File(fileName));
@@ -108,8 +173,7 @@ public class Home extends JFrame {
                 image = resizeImage(image, targetWidth, targetHeight);
             }
 
-            imageContainer = new JLabel(new ImageIcon(image));
-            return imageContainer;
+            return image;
         } catch (Exception e) {
             System.out.println("Error: " + e);
             return null;
