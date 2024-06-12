@@ -170,7 +170,7 @@ public class Team extends JFrame {
         List<Player> matchingPlayer = new ArrayList<>();
 
         try(Connection con = DriverManager.getConnection(jdbcUrl, username, password)){
-            String sql = "SELECT * FROM players_profile WHERE height > ? AND weight < ? AND position LIKE ?";
+            String sql = "SELECT * FROM team_players WHERE height > ? AND weight < ? AND position LIKE ?";
             PreparedStatement ps = con.prepareStatement(sql);
             ps.setString(1, height);
             ps.setString(2, weight);
